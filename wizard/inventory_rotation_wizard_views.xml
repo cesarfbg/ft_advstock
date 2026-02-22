@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Wizard Form -->
+    <record id="view_inventory_rotation_wizard_form" model="ir.ui.view">
+        <field name="name">inventory.rotation.wizard.form</field>
+        <field name="model">inventory.rotation.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Rotación de Inventarios">
+                    <group string="Período">
+                        <field name="date_start"/>
+                        <field name="date_end"/>
+                    </group>
+                    <group string="Filtros">
+                        <field name="company_id" invisible="1"/>
+                        <field name="filter_by_location"/>
+                    </group>
+                <group attrs="{'invisible': [('filter_by_location', '=', False)]}">
+                    <group>
+                        <label for="location_preset_id" string="Preset de Ubicaciones"/>
+                        <div class="o_row">
+                            <field name="location_preset_id" class="oe_inline" placeholder="Seleccione un preset..."/>
+                            <button name="action_select_all_locations"
+                                    string="Seleccionar Todas"
+                                    type="object"
+                                    class="oe_link"
+                                    icon="fa-check-square-o"/>
+                        </div>
+                        <label for="preset_name" string="Guardar como Preset"/>
+                        <div class="o_row">
+                            <field name="preset_name" class="oe_inline" placeholder="Nombre del nuevo preset..."/>
+                            <button name="action_save_preset"
+                                    string="Guardar"
+                                    type="object"
+                                    class="oe_link"
+                                    icon="fa-save"
+                                    attrs="{'invisible': [('preset_name', '=', False)]}"/>
+                        </div>
+                        <field name="location_ids"
+                               widget="many2many_tags"
+                               placeholder="Seleccione ubicaciones..."
+                               style="max-height: 120px; overflow-y: auto; display: block;"/>
+                    </group>
+                </group>
+                <footer>
+                    <button name="action_generate_report"
+                            string="Generar Reporte"
+                            type="object"
+                            class="btn-primary"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Report Lines Search -->
+    <record id="view_inventory_rotation_report_line_search" model="ir.ui.view">
+        <field name="name">inventory.rotation.report.line.search</field>
+        <field name="model">inventory.rotation.report.line</field>
+        <field name="arch" type="xml">
+            <search string="Buscar Rotación">
+                <field name="product_id" string="Producto"/>
+                <field name="categ_id" string="Categoría"/>
+                <filter name="filter_has_outgoing"
+                        string="Con Salidas"
+                        domain="[('outgoing_qty', '!=', 0)]"/>
+                <filter name="filter_has_stock"
+                        string="Con Stock"
+                        domain="[('stock_on_hand', '>', 0)]"/>
+                <separator/>
+                <group expand="0" string="Agrupar por">
+                    <filter name="group_product" string="Producto"
+                            context="{'group_by': 'product_id'}"/>
+                    <filter name="group_category" string="Categoría"
+                            context="{'group_by': 'categ_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Report Lines Tree -->
+    <record id="view_inventory_rotation_report_line_tree" model="ir.ui.view">
+        <field name="name">inventory.rotation.report.line.tree</field>
+        <field name="model">inventory.rotation.report.line</field>
+        <field name="arch" type="xml">
+            <tree string="Rotación de Inventarios" create="false" edit="false">
+                <field name="product_id"/>
+                <field name="categ_id" optional="show"/>
+                <field name="outgoing_qty" sum="Total Saliente"/>
+                <field name="outgoing_avg" avg="Promedio"/>
+                <field name="incoming_pending_qty" sum="Total Pendiente"/>
+                <field name="stock_on_hand" sum="Total Stock"/>
+                <field name="rotation_months" avg="Prom. Meses"/>
+                <field name="rotation_days" avg="Prom. Días"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Wizard Action -->
+    <record id="action_inventory_rotation_wizard" model="ir.actions.act_window">
+        <field name="name">Rotación de Inventarios</field>
+        <field name="res_model">inventory.rotation.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+</odoo>

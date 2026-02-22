@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Section menu under Inventory > Reports -->
+    <menuitem id="menu_advanced_stock_reports_root"
+              name="Inventario Avanzado"
+              parent="stock.menu_warehouse_report"
+              sequence="40"/>
+
+    <!-- Sub-menus -->
+    <menuitem id="menu_inventory_rotation"
+              name="Rotación de Inventarios"
+              parent="menu_advanced_stock_reports_root"
+              action="action_inventory_rotation_wizard"
+              sequence="10"/>
+
+    <menuitem id="menu_reorder_planning"
+              name="Planeación (Reorder)"
+              parent="menu_advanced_stock_reports_root"
+              action="action_reorder_planning_wizard"
+              sequence="20"/>
+
+</odoo>

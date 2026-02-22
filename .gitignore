@@ -1,0 +1,38 @@
+# ==========================================
+# Odoo Envs - .gitignore
+# ==========================================
+
+# Código propietario de Odoo Enterprise (licencia OPL-1)
+# Cada env_*_enterprise/ tiene su carpeta enterprise/ con los addons
+*/enterprise/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Database dumps
+*.sql
+*.dump
+*.backup
+
+# Docker volumes locales (si se almacenan)
+pgdata/
+odoo-data/
+filestore/
+sessions/
+
+# Claude Code metadata (sesiones locales)
+.claude/

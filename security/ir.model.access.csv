@@ -1,0 +1,5 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_inventory_rotation_wizard_user,inventory.rotation.wizard.user,model_inventory_rotation_wizard,stock.group_stock_user,1,1,1,1
+access_inventory_rotation_report_line_user,inventory.rotation.report.line.user,model_inventory_rotation_report_line,stock.group_stock_user,1,1,1,1
+access_inventory_rotation_location_preset_user,inventory.rotation.location.preset.user,model_inventory_rotation_location_preset,stock.group_stock_user,1,1,1,1
+access_reorder_planning_wizard_user,reorder.planning.wizard.user,model_reorder_planning_wizard,stock.group_stock_user,1,1,1,1
