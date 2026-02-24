@@ -193,12 +193,19 @@ class LicenseManager(models.AbstractModel):
             ICP.set_param(cache_key_check, fields.Datetime.to_string(fields.Datetime.now()))
             return 'no_token'
 
+        if not company.vat:
+            _logger.warning('[LIC] No VAT/NIT configured for company %s', company.name)
+            ICP.set_param(cache_key_status, 'no_vat')
+            ICP.set_param(cache_key_check, fields.Datetime.to_string(fields.Datetime.now()))
+            return 'no_vat'
+
         integrity_hash = self._get_integrity_hash()
         payload = {
             'token': token,
             'app_code': APP_CODE,
             'app_version': APP_VERSION,
             'integrity_hash': integrity_hash,
+            'company_vat': company.vat,
         }
         headers = {'Content-Type': 'application/json'}
 
@@ -254,5 +261,6 @@ class LicenseManager(models.AbstractModel):
             'expired': _('La licencia ha expirado. Contacte a Feral Tech.'),
             'tampered': _('Se detectó una modificación no autorizada del módulo.'),
             'error': _('No se pudo conectar al servidor de licencias.'),
+            'no_vat': _('No se ha configurado el NIT/documento de identidad de la compañía en Odoo.'),
         }
         return messages.get(status, _('Licencia no válida (estado: %s).') % status)
