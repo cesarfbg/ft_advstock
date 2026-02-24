@@ -17,6 +17,7 @@
     'depends': [
         'purchase_stock',
         'account',
+        'feral_tech_base',
     ],
     'data': [
         'security/ir.model.access.csv',
