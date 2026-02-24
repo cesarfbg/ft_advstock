@@ -48,12 +48,22 @@ class LicenseManager(models.AbstractModel):
             )
             return False
 
+        if not self.env.company.vat:
+            _logger.warning('[LIC] No VAT/NIT configured for company %s', self.env.company.name)
+            ICP.set_param('advanced_stock_reports.license_status', 'no_vat')
+            ICP.set_param(
+                'advanced_stock_reports.license_last_check',
+                fields.Datetime.to_string(fields.Datetime.now()),
+            )
+            return False
+
         integrity_hash = self._get_integrity_hash()
         payload = {
             'token': token,
             'app_code': APP_CODE,
             'app_version': APP_VERSION,
             'integrity_hash': integrity_hash,
+            'company_vat': self.env.company.vat,
         }
         headers = {'Content-Type': 'application/json'}
 
