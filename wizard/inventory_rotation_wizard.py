@@ -274,7 +274,7 @@ class InventoryRotationWizard(models.TransientModel):
             'domain': [('wizard_id', '=', self.id)],
             'target': 'current',
             'search_view_id': [self.env.ref(
-                'advanced_stock_reports.view_inventory_rotation_report_line_search'
+                'ft_advstock.view_inventory_rotation_report_line_search'
             ).id, 'search'],
             'context': {
                 'create': False,
