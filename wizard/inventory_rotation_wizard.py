@@ -374,7 +374,7 @@ class InventoryRotationReportLine(models.TransientModel):
         ('green', 'Verde'),
         ('yellow', 'Amarillo'),
         ('red', 'Rojo'),
-    ], string='Semáforo', readonly=True)
+    ], string='Flags', readonly=True)
     flag_direction = fields.Selection([
         ('up', '↑'),
         ('down', '↓'),

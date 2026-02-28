@@ -41,7 +41,7 @@
                             <i class="fa fa-flag fa-lg text-primary"/>
                         </div>
                         <div class="o_setting_right_pane">
-                            <span class="o_form_label">Semáforo de Rotación (Valores Predeterminados)</span>
+                            <span class="o_form_label">Flags de Rotación (Valores Predeterminados)</span>
                             <div class="text-muted">
                                 Rangos de días de rotación para clasificar productos.
                             </div>

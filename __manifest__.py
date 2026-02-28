@@ -8,7 +8,7 @@
         =================================
         Módulo de reportes avanzados que incluye:
         - Reporte de Rotación de Inventarios con rango de fechas dinámico
-        - Sistema de semáforo (flags) configurable por producto
+        - Sistema de Flags configurable por producto
         - Planeación de Reorden (Próximamente)
         - Sistema de licenciamiento con verificación de integridad
     """,

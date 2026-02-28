@@ -8,7 +8,7 @@
 
 ## Descripción
 
-**Inventario Avanzado** es un módulo de reportes que proporciona herramientas de análisis para la gestión de inventarios. Permite evaluar la rotación de productos, identificar stock de baja o alta rotación mediante un sistema de semáforo visual, y tomar decisiones informadas sobre reabastecimiento.
+**Inventario Avanzado** es un módulo de reportes que proporciona herramientas de análisis para la gestión de inventarios. Permite evaluar la rotación de productos, identificar stock de baja o alta rotación mediante un sistema de flags visual, y tomar decisiones informadas sobre reabastecimiento.
 
 ---
 
@@ -22,7 +22,7 @@ Este reporte analiza el movimiento de tus productos dentro de un rango de fechas
 
 | Indicador | Descripción |
 |-----------|-------------|
-| **Flag** | Semáforo visual (🟢🟡🔴) con flecha de tendencia (↑↓) |
+| **Flag** | Flags visuales (🟢🟡🔴) con flecha de tendencia (↑↓) |
 | **Producto** | Nombre del producto (clic para abrir la ficha del producto) |
 | **Saliente Total** | Cantidad total vendida/despachada en el periodo |
 | **Saliente Prom./Mes** | Promedio mensual basado en días exactos del rango |
@@ -71,7 +71,7 @@ En los ajustes del módulo se puede activar o desactivar la opción **"Mostrar D
 
 En ambos modos las columnas permanecen ordenables.
 
-### Sistema de Semáforo (Flags)
+### Sistema de Flags
 
 Cada producto en el reporte muestra un indicador visual basado en sus días de rotación:
 
@@ -83,7 +83,7 @@ Cada producto en el reporte muestra un indicador visual basado en sus días de r
 | 🔴 ↓ | Crítico por déficit (rotación por debajo del amarillo min) |
 | 🔴 ↑ | Crítico por exceso (rotación por encima del amarillo max) |
 
-Las filas del reporte se decoran con colores de fondo según el semáforo y se pueden filtrar y agrupar por color.
+Las filas del reporte se decoran con colores de fondo según el flag y se pueden filtrar y agrupar por color.
 
 #### Configuración de rangos predeterminados
 
@@ -112,8 +112,8 @@ Los tres puntos de acceso operan sobre el mismo modelo, por lo que los cambios s
 
 - **Con Salidas**: Muestra solo productos que tuvieron movimiento.
 - **Con Stock**: Muestra solo productos con inventario positivo.
-- **Por color de semáforo**: Filtra por rojo, amarillo o verde.
-- **Agrupación**: Por producto, categoría o semáforo.
+- **Por color de flag**: Filtra por rojo, amarillo o verde.
+- **Agrupación**: Por producto, categoría o flag.
 
 ### Presets de ubicación
 
@@ -132,7 +132,7 @@ Funcionalidad en desarrollo que permitirá planificar compras basándose en los 
 3. (Opcional) Marca **Incluir Entrante Futuro** e indica una fecha tope.
 4. (Opcional) Filtra por **ubicaciones** o carga un preset guardado.
 5. Haz clic en **Generar Reporte**.
-6. Analiza los resultados en la vista de lista. Los colores del semáforo te indican rápidamente qué productos necesitan atención.
+6. Analiza los resultados en la vista de lista. Los colores del flag te indican rápidamente qué productos necesitan atención.
 7. Haz clic en el nombre de un producto para abrir su ficha directamente.
 8. Ordena por cualquier columna numérica haciendo clic en el encabezado.
 
@@ -143,7 +143,7 @@ Funcionalidad en desarrollo que permitirá planificar compras basándose en los 
 1. Navega a **Ajustes > Feral Tech > Inventario Avanzado**.
 2. Ingresa el **token de licencia** proporcionado por Feral Tech.
 3. (Opcional) Activa **Mostrar Decimales** para ver 2 decimales en los reportes.
-4. Configura los **rangos del semáforo** (Amarillo Min, Verde Min, Verde Max, Amarillo Max).
+4. Configura los **rangos del flag** (Amarillo Min, Verde Min, Verde Max, Amarillo Max).
 5. (Opcional) Configura **flags por producto** desde el botón en ajustes, desde **Inventario > Configuración > Inventario Avanzado > Flags de Rotación**, o directamente en la ficha de cada producto.
 
 ---

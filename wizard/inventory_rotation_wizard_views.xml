@@ -89,7 +89,7 @@
                             context="{'group_by': 'product_id'}"/>
                     <filter name="group_category" string="Categoría"
                             context="{'group_by': 'categ_id'}"/>
-                    <filter name="group_flag" string="Semáforo"
+                    <filter name="group_flag" string="Flags"
                             context="{'group_by': 'flag_color'}"/>
                 </group>
             </search>
