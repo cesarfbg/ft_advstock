@@ -12,6 +12,13 @@ class ProductFlagConfig(models.Model):
          'Ya existe una configuración de flags para este producto en esta compañía.'),
     ]
 
+    _FLAG_FIELDS = {
+        'ft_advstock_flag_yellow_min',
+        'ft_advstock_flag_green_min',
+        'ft_advstock_flag_green_max',
+        'ft_advstock_flag_yellow_max',
+    }
+
     product_id = fields.Many2one(
         'product.product',
         string='Producto',
@@ -55,13 +62,19 @@ class ProductFlagConfig(models.Model):
         default=65,
     )
 
-    @api.constrains(
-        'ft_advstock_flag_yellow_min',
-        'ft_advstock_flag_green_min',
-        'ft_advstock_flag_green_max',
-        'ft_advstock_flag_yellow_max',
-    )
-    def _check_flag_ranges(self):
+    @api.model_create_multi
+    def create(self, vals_list):
+        records = super().create(vals_list)
+        records._validate_flag_ranges()
+        return records
+
+    def write(self, vals):
+        res = super().write(vals)
+        if self._FLAG_FIELDS & set(vals.keys()):
+            self._validate_flag_ranges()
+        return res
+
+    def _validate_flag_ranges(self):
         for rec in self:
             y_min = rec.ft_advstock_flag_yellow_min
             g_min = rec.ft_advstock_flag_green_min
@@ -82,95 +95,3 @@ class ProductFlagConfig(models.Model):
                     _('El límite superior amarillo (%s) debe ser mayor que el límite superior verde (%s).')
                     % (y_max, g_max)
                 )
-
-
-class ProductProduct(models.Model):
-    _inherit = 'product.product'
-
-    ft_advstock_has_custom_flag = fields.Boolean(
-        string='Usar Flags de Rotación Personalizadas',
-        compute='_compute_flag_fields',
-        inverse='_inverse_flag_fields',
-    )
-    ft_advstock_flag_yellow_min = fields.Integer(
-        string='Amarillo Min (días)',
-        compute='_compute_flag_fields',
-        inverse='_inverse_flag_fields',
-    )
-    ft_advstock_flag_green_min = fields.Integer(
-        string='Verde Min (días)',
-        compute='_compute_flag_fields',
-        inverse='_inverse_flag_fields',
-    )
-    ft_advstock_flag_green_max = fields.Integer(
-        string='Verde Max (días)',
-        compute='_compute_flag_fields',
-        inverse='_inverse_flag_fields',
-    )
-    ft_advstock_flag_yellow_max = fields.Integer(
-        string='Amarillo Max (días)',
-        compute='_compute_flag_fields',
-        inverse='_inverse_flag_fields',
-    )
-
-    def _get_flag_config(self):
-        """Return the flag config record for this product and current company, or False."""
-        self.ensure_one()
-        return self.env['ft.advstock.product.flag'].search([
-            ('product_id', '=', self.id),
-            ('company_id', '=', self.env.company.id),
-        ], limit=1)
-
-    @api.depends_context('company')
-    def _compute_flag_fields(self):
-        company = self.env.company
-        FlagConfig = self.env['ft.advstock.product.flag']
-        # Batch fetch all configs for these products in current company
-        configs = FlagConfig.search([
-            ('product_id', 'in', self.ids),
-            ('company_id', '=', company.id),
-        ])
-        config_map = {c.product_id.id: c for c in configs}
-
-        for product in self:
-            config = config_map.get(product.id)
-            if config:
-                product.ft_advstock_has_custom_flag = True
-                product.ft_advstock_flag_yellow_min = config.ft_advstock_flag_yellow_min
-                product.ft_advstock_flag_green_min = config.ft_advstock_flag_green_min
-                product.ft_advstock_flag_green_max = config.ft_advstock_flag_green_max
-                product.ft_advstock_flag_yellow_max = config.ft_advstock_flag_yellow_max
-            else:
-                product.ft_advstock_has_custom_flag = False
-                product.ft_advstock_flag_yellow_min = company.ft_advstock_flag_yellow_min
-                product.ft_advstock_flag_green_min = company.ft_advstock_flag_green_min
-                product.ft_advstock_flag_green_max = company.ft_advstock_flag_green_max
-                product.ft_advstock_flag_yellow_max = company.ft_advstock_flag_yellow_max
-
-    def _inverse_flag_fields(self):
-        FlagConfig = self.env['ft.advstock.product.flag']
-        company = self.env.company
-        for product in self:
-            config = FlagConfig.search([
-                ('product_id', '=', product.id),
-                ('company_id', '=', company.id),
-            ], limit=1)
-
-            if product.ft_advstock_has_custom_flag:
-                vals = {
-                    'ft_advstock_flag_yellow_min': product.ft_advstock_flag_yellow_min,
-                    'ft_advstock_flag_green_min': product.ft_advstock_flag_green_min,
-                    'ft_advstock_flag_green_max': product.ft_advstock_flag_green_max,
-                    'ft_advstock_flag_yellow_max': product.ft_advstock_flag_yellow_max,
-                }
-                if config:
-                    config.write(vals)
-                else:
-                    FlagConfig.create({
-                        'product_id': product.id,
-                        'company_id': company.id,
-                        **vals,
-                    })
-            else:
-                if config:
-                    config.unlink()

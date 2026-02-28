@@ -36,13 +36,20 @@ class ResCompany(models.Model):
         help='Por encima de este valor la rotación se marca en rojo (exceso).',
     )
 
-    @api.constrains(
+    _FLAG_FIELDS = {
         'ft_advstock_flag_yellow_min',
         'ft_advstock_flag_green_min',
         'ft_advstock_flag_green_max',
         'ft_advstock_flag_yellow_max',
-    )
-    def _check_flag_ranges(self):
+    }
+
+    def write(self, vals):
+        res = super().write(vals)
+        if self._FLAG_FIELDS & set(vals.keys()):
+            self._validate_flag_ranges()
+        return res
+
+    def _validate_flag_ranges(self):
         for company in self:
             y_min = company.ft_advstock_flag_yellow_min
             g_min = company.ft_advstock_flag_green_min

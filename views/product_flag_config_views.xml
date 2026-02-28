@@ -78,30 +78,4 @@
         </field>
     </record>
 
-    <!-- ===== Product Form: Flags section in Inventory tab ===== -->
-
-    <record id="product_product_form_view_inventory_flags" model="ir.ui.view">
-        <field name="name">product.product.form.inventory.flags</field>
-        <field name="model">product.product</field>
-        <field name="inherit_id" ref="stock.product_form_view_procurement_button"/>
-        <field name="arch" type="xml">
-            <xpath expr="//page[@name='inventory']" position="inside">
-                <separator string="Flags de Rotación"/>
-                <group>
-                    <field name="ft_advstock_has_custom_flag"/>
-                </group>
-                <group attrs="{'invisible': [('ft_advstock_has_custom_flag', '=', False)]}">
-                    <group string="Rangos de Rotación (días)">
-                        <field name="ft_advstock_flag_yellow_min" string="Amarillo Min"/>
-                        <field name="ft_advstock_flag_green_min" string="Verde Min"/>
-                    </group>
-                    <group string=" ">
-                        <field name="ft_advstock_flag_green_max" string="Verde Max"/>
-                        <field name="ft_advstock_flag_yellow_max" string="Amarillo Max"/>
-                    </group>
-                </group>
-            </xpath>
-        </field>
-    </record>
-
 </odoo>
