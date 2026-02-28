@@ -9,7 +9,8 @@
 
                 <h2>Inventario Avanzado</h2>
 
-                <div class="row mt16 o_settings_container" id="advanced_stock_license_settings">
+                <div class="row mt16 o_settings_container" id="advanced_stock_settings">
+                    <!-- LEFT: License + Decimals -->
                     <div class="col-12 col-lg-6 o_setting_box">
                         <div class="o_setting_left_pane"/>
                         <div class="o_setting_right_pane">
@@ -21,6 +22,53 @@
                                 <div class="mt16">
                                     <field name="ft_advstock_license_token"/>
                                 </div>
+                            </div>
+                            <div class="mt16">
+                                <div class="o_row">
+                                    <field name="ft_advstock_use_decimals"/>
+                                    <label for="ft_advstock_use_decimals"/>
+                                </div>
+                                <div class="text-muted">
+                                    Mostrar valores con 2 decimales en los reportes. Si está desactivado, los números se redondean a enteros.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- RIGHT: Semaphore config -->
+                    <div class="col-12 col-lg-6 o_setting_box">
+                        <div class="o_setting_left_pane">
+                            <i class="fa fa-flag fa-lg text-primary"/>
+                        </div>
+                        <div class="o_setting_right_pane">
+                            <span class="o_form_label">Semáforo de Rotación (Valores Predeterminados)</span>
+                            <div class="text-muted">
+                                Rangos de días de rotación para clasificar productos.
+                            </div>
+                            <div class="content-group mt16">
+                                <div class="row">
+                                    <label for="ft_advstock_flag_yellow_min" class="col-4 col-lg-4" string="Amarillo Min"/>
+                                    <field name="ft_advstock_flag_yellow_min" class="col-2"/>
+                                </div>
+                                <div class="row mt8">
+                                    <label for="ft_advstock_flag_green_min" class="col-4 col-lg-4" string="Verde Min"/>
+                                    <field name="ft_advstock_flag_green_min" class="col-2"/>
+                                </div>
+                                <div class="row mt8">
+                                    <label for="ft_advstock_flag_green_max" class="col-4 col-lg-4" string="Verde Max"/>
+                                    <field name="ft_advstock_flag_green_max" class="col-2"/>
+                                </div>
+                                <div class="row mt8">
+                                    <label for="ft_advstock_flag_yellow_max" class="col-4 col-lg-4" string="Amarillo Max"/>
+                                    <field name="ft_advstock_flag_yellow_max" class="col-2"/>
+                                </div>
+                            </div>
+                            <div class="mt16">
+                                <button name="%(ft_advstock.action_product_flag_config)d"
+                                        string="Configurar Flags por Producto"
+                                        type="action"
+                                        class="btn-link"
+                                        icon="fa-arrow-right"/>
                             </div>
                         </div>
                     </div>

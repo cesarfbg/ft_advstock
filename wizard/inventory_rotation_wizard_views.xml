@@ -11,8 +11,14 @@
                         <field name="date_start"/>
                         <field name="date_end"/>
                     </group>
-                    <group string="Filtros">
+                    <group string="Entrante Futuro">
                         <field name="company_id" invisible="1"/>
+                        <field name="include_future_incoming"/>
+                        <field name="incoming_cutoff_date"
+                               attrs="{'invisible': [('include_future_incoming', '=', False)],
+                                       'required': [('include_future_incoming', '=', True)]}"/>
+                    </group>
+                    <group string="Filtros">
                         <field name="filter_by_location"/>
                     </group>
                 <group attrs="{'invisible': [('filter_by_location', '=', False)]}">
@@ -68,11 +74,23 @@
                         string="Con Stock"
                         domain="[('stock_on_hand', '>', 0)]"/>
                 <separator/>
+                <filter name="filter_flag_red"
+                        string="Rojo"
+                        domain="[('flag_color', '=', 'red')]"/>
+                <filter name="filter_flag_yellow"
+                        string="Amarillo"
+                        domain="[('flag_color', '=', 'yellow')]"/>
+                <filter name="filter_flag_green"
+                        string="Verde"
+                        domain="[('flag_color', '=', 'green')]"/>
+                <separator/>
                 <group expand="0" string="Agrupar por">
                     <filter name="group_product" string="Producto"
                             context="{'group_by': 'product_id'}"/>
                     <filter name="group_category" string="Categoría"
                             context="{'group_by': 'categ_id'}"/>
+                    <filter name="group_flag" string="Semáforo"
+                            context="{'group_by': 'flag_color'}"/>
                 </group>
             </search>
         </field>
@@ -83,8 +101,14 @@
         <field name="name">inventory.rotation.report.line.tree</field>
         <field name="model">inventory.rotation.report.line</field>
         <field name="arch" type="xml">
-            <tree string="Rotación de Inventarios" create="false" edit="false">
-                <field name="product_id"/>
+            <tree string="Rotación de Inventarios" create="false" edit="false"
+                  decoration-danger="flag_color == 'red'"
+                  decoration-warning="flag_color == 'yellow'"
+                  decoration-success="flag_color == 'green'">
+                <field name="flag_color" invisible="1"/>
+                <field name="flag_direction" invisible="1"/>
+                <field name="flag_display" string="Flag"/>
+                <field name="product_id" widget="many2one_clickable"/>
                 <field name="categ_id" optional="show"/>
                 <field name="outgoing_qty" sum="Total Saliente"/>
                 <field name="outgoing_avg" avg="Promedio"/>

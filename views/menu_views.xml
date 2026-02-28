@@ -7,7 +7,7 @@
               parent="stock.menu_warehouse_report"
               sequence="40"/>
 
-    <!-- Sub-menus -->
+    <!-- Sub-menus (Reports) -->
     <menuitem id="menu_inventory_rotation"
               name="Rotación de Inventarios"
               parent="menu_ft_advstock_root"
@@ -19,5 +19,17 @@
               parent="menu_ft_advstock_root"
               action="action_reorder_planning_wizard"
               sequence="20"/>
+
+    <!-- Configuration: Inventory > Configuration > Inventario Avanzado > ... -->
+    <menuitem id="menu_ft_advstock_config_root"
+              name="Inventario Avanzado"
+              parent="stock.menu_stock_config_settings"
+              sequence="90"/>
+
+    <menuitem id="menu_ft_advstock_config_flags"
+              name="Flags de Rotación"
+              parent="menu_ft_advstock_config_root"
+              action="action_product_flag_config"
+              sequence="10"/>
 
 </odoo>

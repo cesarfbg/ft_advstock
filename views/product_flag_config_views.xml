@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ===== Flag Config: dedicated views ===== -->
+
+    <!-- Tree View -->
+    <record id="view_product_flag_config_tree" model="ir.ui.view">
+        <field name="name">ft.advstock.product.flag.tree</field>
+        <field name="model">ft.advstock.product.flag</field>
+        <field name="arch" type="xml">
+            <tree string="Flags de Rotación por Producto" editable="bottom">
+                <field name="product_id"/>
+                <field name="categ_id" optional="show"/>
+                <field name="ft_advstock_flag_yellow_min" string="Amarillo Min"/>
+                <field name="ft_advstock_flag_green_min" string="Verde Min"/>
+                <field name="ft_advstock_flag_green_max" string="Verde Max"/>
+                <field name="ft_advstock_flag_yellow_max" string="Amarillo Max"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Form View -->
+    <record id="view_product_flag_config_form" model="ir.ui.view">
+        <field name="name">ft.advstock.product.flag.form</field>
+        <field name="model">ft.advstock.product.flag</field>
+        <field name="arch" type="xml">
+            <form string="Flag de Rotación">
+                <sheet>
+                    <group>
+                        <group string="Producto">
+                            <field name="product_id"/>
+                            <field name="categ_id"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                        <group string="Rangos de Rotación (días)">
+                            <field name="ft_advstock_flag_yellow_min" string="Amarillo Min (Rojo por debajo)"/>
+                            <field name="ft_advstock_flag_green_min" string="Verde Min"/>
+                            <field name="ft_advstock_flag_green_max" string="Verde Max"/>
+                            <field name="ft_advstock_flag_yellow_max" string="Amarillo Max (Rojo por encima)"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Search View -->
+    <record id="view_product_flag_config_search" model="ir.ui.view">
+        <field name="name">ft.advstock.product.flag.search</field>
+        <field name="model">ft.advstock.product.flag</field>
+        <field name="arch" type="xml">
+            <search string="Buscar Flags">
+                <field name="product_id"/>
+                <field name="categ_id"/>
+                <group expand="0" string="Agrupar por">
+                    <filter name="group_category" string="Categoría"
+                            context="{'group_by': 'categ_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_product_flag_config" model="ir.actions.act_window">
+        <field name="name">Flags de Rotación por Producto</field>
+        <field name="res_model">ft.advstock.product.flag</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Configurar flags de rotación personalizadas
+            </p>
+            <p>
+                Defina rangos de rotación específicos para productos individuales.
+                Los productos sin configuración personalizada usarán los valores
+                predeterminados de los ajustes generales.
+            </p>
+        </field>
+    </record>
+
+    <!-- ===== Product Form: Flags section in Inventory tab ===== -->
+
+    <record id="product_product_form_view_inventory_flags" model="ir.ui.view">
+        <field name="name">product.product.form.inventory.flags</field>
+        <field name="model">product.product</field>
+        <field name="inherit_id" ref="stock.product_form_view_procurement_button"/>
+        <field name="arch" type="xml">
+            <xpath expr="//page[@name='inventory']" position="inside">
+                <separator string="Flags de Rotación"/>
+                <group>
+                    <field name="ft_advstock_has_custom_flag"/>
+                </group>
+                <group attrs="{'invisible': [('ft_advstock_has_custom_flag', '=', False)]}">
+                    <group string="Rangos de Rotación (días)">
+                        <field name="ft_advstock_flag_yellow_min" string="Amarillo Min"/>
+                        <field name="ft_advstock_flag_green_min" string="Verde Min"/>
+                    </group>
+                    <group string=" ">
+                        <field name="ft_advstock_flag_green_max" string="Verde Max"/>
+                        <field name="ft_advstock_flag_yellow_max" string="Amarillo Max"/>
+                    </group>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

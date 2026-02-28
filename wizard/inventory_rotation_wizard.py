@@ -1,6 +1,8 @@
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 
+INFINITY_DAYS = 9999.0
+
 
 class InventoryRotationLocationPreset(models.Model):
     _name = 'inventory.rotation.location.preset'
@@ -34,6 +36,15 @@ class InventoryRotationWizard(models.TransientModel):
         string='Fecha Fin',
         required=True,
         default=fields.Date.today,
+    )
+    include_future_incoming = fields.Boolean(
+        string='Incluir Entrante Futuro',
+        help='Permite extender la fecha de búsqueda de inventario entrante '
+             'más allá del período de análisis de ventas.',
+    )
+    incoming_cutoff_date = fields.Date(
+        string='Fecha Tope Entrante',
+        help='Fecha límite para considerar órdenes de compra entrantes.',
     )
     filter_by_location = fields.Boolean(
         string='Filtrar por Ubicación',
@@ -102,14 +113,6 @@ class InventoryRotationWizard(models.TransientModel):
             'target': 'new',
         }
 
-    def _get_months_in_period(self):
-        """Calculate the number of calendar months touched by the date range."""
-        return max(
-            (self.date_end.year - self.date_start.year) * 12
-            + (self.date_end.month - self.date_start.month) + 1,
-            1,
-        )
-
     def action_generate_report(self):
         self.ensure_one()
         self.env['advanced.stock.reports.license'].check_license()
@@ -117,9 +120,16 @@ class InventoryRotationWizard(models.TransientModel):
         if self.date_start > self.date_end:
             raise UserError(_('La fecha de inicio no puede ser posterior a la fecha fin.'))
 
+        if self.include_future_incoming:
+            if not self.incoming_cutoff_date:
+                raise UserError(_('Debe indicar una fecha tope para el entrante futuro.'))
+            if self.incoming_cutoff_date < self.date_end:
+                raise UserError(_('La fecha tope del entrante debe ser igual o posterior a la fecha fin del período.'))
+
         self.line_ids.unlink()
 
-        months_in_period = self._get_months_in_period()
+        # Days-based period calculation for accurate monthly averages
+        days_in_range = (self.date_end - self.date_start).days + 1
 
         # Get selected companies from context (multi-company support)
         allowed_company_ids = self.env.context.get('allowed_company_ids', [self.env.company.id])
@@ -187,6 +197,14 @@ class InventoryRotationWizard(models.TransientModel):
         outgoing_map = {r[0]: r[1] for r in self.env.cr.fetchall()}
 
         # --- 2. Incoming pending (not done, destination internal) ---
+        # Use extended date range if future incoming is enabled
+        if self.include_future_incoming and self.incoming_cutoff_date:
+            incoming_end_str = fields.Datetime.to_string(
+                fields.Datetime.from_string(str(self.incoming_cutoff_date) + ' 23:59:59')
+            )
+        else:
+            incoming_end_str = date_end_str
+
         if use_locations:
             self.env.cr.execute("""
                 SELECT sm.product_id, SUM(sm.product_uom_qty) AS qty
@@ -197,7 +215,7 @@ class InventoryRotationWizard(models.TransientModel):
                   AND sm.date <= %s
                   AND sm.company_id IN %s
                 GROUP BY sm.product_id
-            """, (loc_ids, date_start_str, date_end_str, company_ids))
+            """, (loc_ids, date_start_str, incoming_end_str, company_ids))
         else:
             self.env.cr.execute("""
                 SELECT sm.product_id, SUM(sm.product_uom_qty) AS qty
@@ -209,14 +227,12 @@ class InventoryRotationWizard(models.TransientModel):
                   AND sm.date <= %s
                   AND sm.company_id IN %s
                 GROUP BY sm.product_id
-            """, (date_start_str, date_end_str, company_ids))
+            """, (date_start_str, incoming_end_str, company_ids))
         pending_map = {r[0]: r[1] for r in self.env.cr.fetchall()}
 
         # --- 3. Stock on hand (current qty_available from Odoo) ---
-        # Include all products with stock > 0, plus those with movements
         all_product_ids = set(outgoing_map.keys()) | set(pending_map.keys())
 
-        # Also fetch all products with positive stock
         if use_locations:
             products_with_stock = self.env['product.product'].with_context(
                 location=self.location_ids.ids
@@ -235,23 +251,68 @@ class InventoryRotationWizard(models.TransientModel):
             for prod in products:
                 stock_map[prod.id] = prod.qty_available
 
-        # --- 4. Build report lines ---
+        # --- 4. Build report lines with flags ---
+        company = self.env.company
+        # Pre-fetch all custom flag configs to avoid N+1 queries
+        custom_flags = {}
+        flag_records = self.env['ft.advstock.product.flag'].search([
+            ('product_id', 'in', list(all_product_ids)),
+            ('company_id', '=', company.id),
+        ])
+        for rec in flag_records:
+            custom_flags[rec.product_id.id] = rec
+
         lines_vals = []
         for product_id in all_product_ids:
             outgoing = outgoing_map.get(product_id, 0.0)
             pending = pending_map.get(product_id, 0.0)
             stock = stock_map.get(product_id, 0.0)
 
-            # Average monthly outgoing
-            outgoing_avg = outgoing / months_in_period if months_in_period else 0.0
+            # Average daily outgoing → monthly (30-day basis)
+            outgoing_avg = (outgoing / days_in_range * 30) if days_in_range > 0 else 0.0
 
-            # Rotation: stock / average monthly outgoing
+            # Rotation: (stock + incoming) / average monthly outgoing
+            total_available = stock + pending
             if outgoing_avg > 0:
-                rotation_months = stock / outgoing_avg
+                rotation_months = total_available / outgoing_avg
                 rotation_days = rotation_months * 30
             else:
-                rotation_months = 0.0
-                rotation_days = 0.0
+                if total_available > 0:
+                    rotation_days = INFINITY_DAYS
+                    rotation_months = INFINITY_DAYS
+                else:
+                    rotation_days = 0.0
+                    rotation_months = 0.0
+
+            # Determine flag color and direction
+            flag_rec = custom_flags.get(product_id)
+            if flag_rec:
+                y_min = flag_rec.ft_advstock_flag_yellow_min
+                g_min = flag_rec.ft_advstock_flag_green_min
+                g_max = flag_rec.ft_advstock_flag_green_max
+                y_max = flag_rec.ft_advstock_flag_yellow_max
+            else:
+                y_min = company.ft_advstock_flag_yellow_min
+                g_min = company.ft_advstock_flag_green_min
+                g_max = company.ft_advstock_flag_green_max
+                y_max = company.ft_advstock_flag_yellow_max
+
+            rd = rotation_days
+            if g_min <= rd <= g_max:
+                flag_color = 'green'
+                flag_direction = 'none'
+            elif y_min <= rd < g_min:
+                flag_color = 'yellow'
+                flag_direction = 'down'
+            elif g_max < rd <= y_max:
+                flag_color = 'yellow'
+                flag_direction = 'up'
+            elif rd < y_min:
+                flag_color = 'red'
+                flag_direction = 'down'
+            else:
+                flag_color = 'red'
+                flag_direction = 'up'
 
             lines_vals.append({
                 'wizard_id': self.id,
@@ -262,6 +323,8 @@ class InventoryRotationWizard(models.TransientModel):
                 'stock_on_hand': stock,
                 'rotation_months': rotation_months,
                 'rotation_days': rotation_days,
+                'flag_color': flag_color,
+                'flag_direction': flag_direction,
             })
 
         self.env['inventory.rotation.report.line'].create(lines_vals)
@@ -279,7 +342,6 @@ class InventoryRotationWizard(models.TransientModel):
             'context': {
                 'create': False,
                 'edit': False,
-                'search_default_filter_has_outgoing': 1,
             },
         }
 
@@ -288,6 +350,11 @@ class InventoryRotationReportLine(models.TransientModel):
     _name = 'inventory.rotation.report.line'
     _description = 'Línea de Reporte de Rotación'
     _order = 'rotation_months asc'
+
+    NUMERIC_FIELDS = (
+        'outgoing_qty', 'outgoing_avg', 'incoming_pending_qty',
+        'stock_on_hand', 'rotation_months', 'rotation_days',
+    )
 
     wizard_id = fields.Many2one('inventory.rotation.wizard', ondelete='cascade')
     product_id = fields.Many2one('product.product', string='Producto', readonly=True)
@@ -303,9 +370,79 @@ class InventoryRotationReportLine(models.TransientModel):
         readonly=True,
         store=True,
     )
-    outgoing_qty = fields.Float(string='Saliente Total', readonly=True, digits='Product Unit of Measure')
-    outgoing_avg = fields.Float(string='Saliente Prom./Mes', readonly=True, digits=(16, 1))
-    incoming_pending_qty = fields.Float(string='Entrante Pendiente', readonly=True, digits='Product Unit of Measure')
-    stock_on_hand = fields.Float(string='Stock a la Mano', readonly=True, digits='Product Unit of Measure')
-    rotation_months = fields.Float(string='Rotación (Meses)', readonly=True, digits=(16, 1))
-    rotation_days = fields.Float(string='Rotación (Días)', readonly=True, digits=(16, 0))
+    flag_color = fields.Selection([
+        ('green', 'Verde'),
+        ('yellow', 'Amarillo'),
+        ('red', 'Rojo'),
+    ], string='Semáforo', readonly=True)
+    flag_direction = fields.Selection([
+        ('up', '↑'),
+        ('down', '↓'),
+        ('none', '—'),
+    ], string='Tendencia', readonly=True)
+    flag_display = fields.Char(
+        string='Flag',
+        compute='_compute_flag_display',
+    )
+    outgoing_qty = fields.Float(string='Saliente Total', readonly=True, digits=(16, 2))
+    outgoing_avg = fields.Float(string='Saliente Prom./Mes', readonly=True, digits=(16, 2))
+    incoming_pending_qty = fields.Float(string='Entrante Pendiente', readonly=True, digits=(16, 2))
+    stock_on_hand = fields.Float(string='Stock a la Mano', readonly=True, digits=(16, 2))
+    rotation_months = fields.Float(string='Rotación (Meses)', readonly=True, digits=(16, 2))
+    rotation_days = fields.Float(string='Rotación (Días)', readonly=True, digits=(16, 2))
+
+    @api.depends('flag_color', 'flag_direction')
+    def _compute_flag_display(self):
+        color_icons = {
+            'green': '🟢',
+            'yellow': '🟡',
+            'red': '🔴',
+        }
+        direction_icons = {
+            'up': ' ↑',
+            'down': ' ↓',
+            'none': '',
+        }
+        for rec in self:
+            color = color_icons.get(rec.flag_color, '')
+            direction = direction_icons.get(rec.flag_direction, '')
+            rec.flag_display = f"{color}{direction}"
+
+    @api.model
+    def fields_get(self, allfields=None, attributes=None):
+        """Dynamically adjust field digits based on company decimals setting."""
+        res = super().fields_get(allfields, attributes)
+        if not self.env.company.ft_advstock_use_decimals:
+            for field_name in self.NUMERIC_FIELDS:
+                if field_name in res:
+                    res[field_name]['digits'] = [16, 0]
+        return res
+
+    @api.model
+    def _format_values(self, values_list):
+        """Round values to integers when decimals are off."""
+        if not values_list:
+            return values_list
+        if not self.env.company.ft_advstock_use_decimals:
+            for vals in values_list:
+                for field_name in self.NUMERIC_FIELDS:
+                    if field_name in vals and vals[field_name] is not None:
+                        vals[field_name] = int(round(vals[field_name]))
+        return values_list
+
+    @api.model
+    def search_read(self, domain=None, fields=None, offset=0, limit=None, order=None):
+        """Apply formatting to search_read results."""
+        result = super().search_read(domain, fields, offset, limit, order)
+        return self._format_values(result)
+
+    @api.model
+    def read_group(self, domain, fields, groupby, offset=0, limit=None, orderby=False, lazy=True):
+        """Apply formatting to read_group results (aggregations)."""
+        result = super().read_group(domain, fields, groupby, offset, limit, orderby, lazy)
+        if not self.env.company.ft_advstock_use_decimals:
+            for group in result:
+                for field_name in self.NUMERIC_FIELDS:
+                    if field_name in group and group[field_name] is not None:
+                        group[field_name] = int(round(group[field_name]))
+        return result
