@@ -35,6 +35,22 @@ class ResCompany(models.Model):
         default=65,
         help='Por encima de este valor la rotación se marca en rojo (exceso).',
     )
+    ft_advstock_excluded_location_ids = fields.Many2many(
+        'stock.location',
+        'ft_advstock_excluded_location_rel',
+        'company_id',
+        'location_id',
+        string='Ubicaciones Excluidas (Planeación)',
+        help='Ubicaciones de inventario que se excluyen del cálculo de inventario inicial en la planeación.',
+    )
+    ft_advstock_planning_picking_type_ids = fields.Many2many(
+        'stock.picking.type',
+        'ft_advstock_planning_picking_type_rel',
+        'company_id',
+        'picking_type_id',
+        string='Tipos de Operación (Ventas Reales)',
+        help='Tipos de operación que se consideran como "salidas" para el cálculo de ventas reales.',
+    )
 
     _FLAG_FIELDS = {
         'ft_advstock_flag_yellow_min',
@@ -102,5 +118,13 @@ class ResConfigSettings(models.TransientModel):
     )
     ft_advstock_flag_yellow_max = fields.Integer(
         related='company_id.ft_advstock_flag_yellow_max',
+        readonly=False,
+    )
+    ft_advstock_excluded_location_ids = fields.Many2many(
+        related='company_id.ft_advstock_excluded_location_ids',
+        readonly=False,
+    )
+    ft_advstock_planning_picking_type_ids = fields.Many2many(
+        related='company_id.ft_advstock_planning_picking_type_ids',
         readonly=False,
     )

@@ -1,13 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-    <!-- Section menu under Inventory > Reports -->
+    <!-- ===== Inventory > Reports > Inventario Avanzado ===== -->
     <menuitem id="menu_ft_advstock_root"
               name="Inventario Avanzado"
               parent="stock.menu_warehouse_report"
               sequence="40"/>
 
-    <!-- Sub-menus (Reports) -->
     <menuitem id="menu_inventory_rotation"
               name="Rotación de Inventarios"
               parent="menu_ft_advstock_root"
@@ -15,12 +14,30 @@
               sequence="10"/>
 
     <menuitem id="menu_reorder_planning"
-              name="Planeación (Reorder)"
+              name="Planeación de Compras"
               parent="menu_ft_advstock_root"
-              action="action_reorder_planning_wizard"
+              action="action_purchase_planning_open"
               sequence="20"/>
 
-    <!-- Configuration: Inventory > Configuration > Inventario Avanzado > ... -->
+    <!-- ===== Purchase > Reports > Inventario Avanzado ===== -->
+    <menuitem id="menu_ft_advstock_purchase_root"
+              name="Inventario Avanzado"
+              parent="purchase.purchase_report_main"
+              sequence="40"/>
+
+    <menuitem id="menu_purchase_inventory_rotation"
+              name="Rotación de Inventarios"
+              parent="menu_ft_advstock_purchase_root"
+              action="action_inventory_rotation_wizard"
+              sequence="10"/>
+
+    <menuitem id="menu_purchase_reorder_planning"
+              name="Planeación de Compras"
+              parent="menu_ft_advstock_purchase_root"
+              action="action_purchase_planning_open"
+              sequence="20"/>
+
+    <!-- ===== Inventory > Configuration > Inventario Avanzado ===== -->
     <menuitem id="menu_ft_advstock_config_root"
               name="Inventario Avanzado"
               parent="stock.menu_stock_config_settings"
@@ -31,5 +48,11 @@
               parent="menu_ft_advstock_config_root"
               action="action_product_flag_config"
               sequence="10"/>
+
+    <menuitem id="menu_ft_advstock_config_forecast"
+              name="Forecast Logístico"
+              parent="menu_ft_advstock_config_root"
+              action="action_logistics_forecast"
+              sequence="20"/>
 
 </odoo>

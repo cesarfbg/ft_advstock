@@ -2,5 +2,8 @@ id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_inventory_rotation_wizard_user,inventory.rotation.wizard.user,model_inventory_rotation_wizard,stock.group_stock_user,1,1,1,1
 access_inventory_rotation_report_line_user,inventory.rotation.report.line.user,model_inventory_rotation_report_line,stock.group_stock_user,1,1,1,1
 access_inventory_rotation_location_preset_user,inventory.rotation.location.preset.user,model_inventory_rotation_location_preset,stock.group_stock_user,1,1,1,1
-access_reorder_planning_wizard_user,reorder.planning.wizard.user,model_reorder_planning_wizard,stock.group_stock_user,1,1,1,1
 access_ft_advstock_product_flag_user,ft.advstock.product.flag.user,model_ft_advstock_product_flag,stock.group_stock_user,1,1,1,1
+access_ft_advstock_logistics_forecast_user,ft.advstock.logistics.forecast.user,model_ft_advstock_logistics_forecast,stock.group_stock_user,1,1,1,1
+access_ft_advstock_purchase_planning_user,ft.advstock.purchase.planning.user,model_ft_advstock_purchase_planning,stock.group_stock_user,1,1,1,1
+access_ft_advstock_planning_line_user,ft.advstock.planning.line.user,model_ft_advstock_planning_line,stock.group_stock_user,1,1,1,1
+access_ft_advstock_planning_product_wizard_user,ft.advstock.planning.product.wizard.user,model_ft_advstock_planning_product_wizard,stock.group_stock_user,1,1,1,1

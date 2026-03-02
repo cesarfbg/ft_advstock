@@ -74,6 +74,40 @@
                     </div>
                 </div>
 
+                <div class="row mt16 o_settings_container" id="advanced_stock_planning_settings">
+                    <div class="col-12 col-lg-6 o_setting_box">
+                        <div class="o_setting_left_pane">
+                            <i class="fa fa-calendar fa-lg text-primary"/>
+                        </div>
+                        <div class="o_setting_right_pane">
+                            <span class="o_form_label">Planeación de Compras</span>
+                            <div class="text-muted">
+                                Configuración para el reporte de planeación de compras.
+                            </div>
+                            <div class="content-group mt16">
+                                <label for="ft_advstock_excluded_location_ids"/>
+                                <div class="text-muted">
+                                    Ubicaciones que se excluyen del cálculo de inventario inicial.
+                                </div>
+                                <div class="mt8">
+                                    <field name="ft_advstock_excluded_location_ids"
+                                           widget="many2many_tags"/>
+                                </div>
+                            </div>
+                            <div class="content-group mt16">
+                                <label for="ft_advstock_planning_picking_type_ids"/>
+                                <div class="text-muted">
+                                    Tipos de operación que cuentan como salidas para ventas reales.
+                                </div>
+                                <div class="mt8">
+                                    <field name="ft_advstock_planning_picking_type_ids"
+                                           widget="many2many_tags"/>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </xpath>
         </field>
     </record>
