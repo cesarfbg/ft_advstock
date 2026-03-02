@@ -404,10 +404,10 @@ class PurchasePlanning(models.TransientModel):
             return result
 
         excluded_clause = ""
-        params = [product_id, company_ids]
+        excluded_params = []
         if excluded_loc_ids:
             excluded_clause = "AND sl.id NOT IN %s"
-            params.append(tuple(excluded_loc_ids))
+            excluded_params = [tuple(excluded_loc_ids)]
 
         for month_start in months:
             self.env.cr.execute("""
@@ -428,7 +428,7 @@ class PurchasePlanning(models.TransientModel):
                   AND sm.date < %%s
                   AND sl.usage = 'internal'
                   %s
-            """ % excluded_clause, params + [month_start])
+            """ % excluded_clause, [product_id, company_ids, month_start] + excluded_params)
             row = self.env.cr.fetchone()
             result[month_start] = row[0] if row else 0.0
 
@@ -442,10 +442,10 @@ class PurchasePlanning(models.TransientModel):
             return result
 
         excluded_clause = ""
-        params = [product_id, company_ids]
+        excluded_params = []
         if excluded_loc_ids:
             excluded_clause = "AND sl.id NOT IN %s"
-            params.append(tuple(excluded_loc_ids))
+            excluded_params = [tuple(excluded_loc_ids)]
 
         for month_start in past_months:
             month_end = month_start + relativedelta(months=1)
@@ -467,7 +467,7 @@ class PurchasePlanning(models.TransientModel):
                   AND sm.date < %%s
                   AND sl.usage = 'internal'
                   %s
-            """ % excluded_clause, params + [month_end])
+            """ % excluded_clause, [product_id, company_ids, month_end] + excluded_params)
             row = self.env.cr.fetchone()
             result[month_start] = row[0] if row else 0.0
 
@@ -483,10 +483,10 @@ class PurchasePlanning(models.TransientModel):
         date_to = months[-1] + relativedelta(months=1)
 
         excluded_clause = ""
-        params = [product_id, company_ids, date_from, date_to]
+        excluded_params = []
         if excluded_loc_ids:
             excluded_clause = "AND sl_dest.id NOT IN %s"
-            params.append(tuple(excluded_loc_ids))
+            excluded_params = [tuple(excluded_loc_ids)]
 
         self.env.cr.execute("""
             SELECT DATE_TRUNC('month', sm.date)::date AS month_start,
@@ -504,7 +504,7 @@ class PurchasePlanning(models.TransientModel):
               AND po.state = 'purchase'
               %s
             GROUP BY DATE_TRUNC('month', sm.date)
-        """ % excluded_clause, params)
+        """ % excluded_clause, [product_id, company_ids, date_from, date_to] + excluded_params)
 
         for row in self.env.cr.fetchall():
             month_key = row[0]
