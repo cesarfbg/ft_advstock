@@ -73,22 +73,17 @@ def _parse_float(text):
         return 0.0
 
 
-class PurchasePlanning(models.Model):
+class PurchasePlanning(models.TransientModel):
     _name = 'ft.advstock.purchase.planning'
     _description = 'Planeación de Compras por Producto'
-    _order = 'product_id'
     _rec_name = 'product_id'
-    _sql_constraints = [
-        ('product_company_uniq', 'unique(product_id, company_id)',
-         'Ya existe una planeación para este producto en esta compañía.'),
-    ]
 
     product_id = fields.Many2one(
         'product.product', string='Producto',
-        required=True, ondelete='cascade',
+        required=True,
     )
     product_categ_id = fields.Many2one(
-        related='product_id.categ_id', string='Categoría', store=True,
+        related='product_id.categ_id', string='Categoría',
     )
     product_display_name = fields.Char(
         compute='_compute_product_display_name',
@@ -162,7 +157,6 @@ class PurchasePlanning(models.Model):
             'res_model': 'ft.advstock.planning.product.wizard',
             'view_mode': 'form',
             'target': 'new',
-            'context': {'default_company_id': self.company_id.id},
         }
 
     def _reload_form(self):
@@ -584,14 +578,14 @@ class PurchasePlanning(models.Model):
         return '%s %s' % (month_names[date.month], date.year)
 
 
-class PurchasePlanningLine(models.Model):
+class PurchasePlanningLine(models.TransientModel):
     _name = 'ft.advstock.planning.line'
     _description = 'Línea de Planeación de Compras'
     _order = 'planning_id, sequence'
 
     planning_id = fields.Many2one(
         'ft.advstock.purchase.planning', string='Planeación',
-        required=True, ondelete='cascade',
+        required=True,
     )
     sequence = fields.Integer(default=0)
     row_type = fields.Selection(ROW_TYPES, string='Tipo de Fila')

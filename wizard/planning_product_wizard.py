@@ -10,21 +10,10 @@ class PlanningProductWizard(models.TransientModel):
     )
 
     def action_go(self):
-        """Find or create the planning for the selected product, then open it."""
-        Planning = self.env['ft.advstock.purchase.planning']
-        company = self.env.company
-        today_first = fields.Date.today().replace(day=1)
-        existing = Planning.search([
-            ('product_id', '=', self.product_id.id),
-            ('company_id', '=', company.id),
-        ], limit=1)
-        if not existing:
-            existing = Planning.create({
-                'product_id': self.product_id.id,
-                'company_id': company.id,
-                'center_date': today_first,
-            })
-        else:
-            existing.center_date = today_first
-            existing._do_refresh(reset_projections=True)
-        return existing._reload_form()
+        """Create a fresh transient planning and open it."""
+        planning = self.env['ft.advstock.purchase.planning'].create({
+            'product_id': self.product_id.id,
+            'company_id': self.env.company.id,
+            'center_date': fields.Date.today().replace(day=1),
+        })
+        return planning._reload_form()

@@ -6,7 +6,7 @@
         <field name="name">ft.advstock.purchase.planning.form</field>
         <field name="model">ft.advstock.purchase.planning</field>
         <field name="arch" type="xml">
-            <form string="Planeación de Compras">
+            <form string="Planeación de Compras" create="false" delete="false" duplicate="false">
                 <header>
                     <button name="action_prev" type="object"
                             string="◀ Anterior" class="btn-secondary"
