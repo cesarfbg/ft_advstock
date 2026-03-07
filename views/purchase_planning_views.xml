@@ -33,7 +33,11 @@
                         <field name="company_id"/>
                     </group>
                     <div class="text-center mb16">
-                        <h1><field name="product_display_name" readonly="1" nolabel="1"/></h1>
+                        <button name="action_open_product" type="object"
+                                class="oe_link p-0"
+                                style="font-size: 2rem; font-weight: bold; text-decoration: none;">
+                            <field name="product_display_name" readonly="1" nolabel="1"/>
+                        </button>
                     </div>
                     <field name="line_ids" nolabel="1">
                         <tree editable="bottom"
@@ -68,11 +72,11 @@
                         </tree>
                     </field>
                     <div class="d-flex justify-content-between mt-2">
-                        <button name="action_equalize_forecast" type="object"
-                                string=" Igualar Pronóstico de Venta a Venta Real"
+                        <button name="action_clear_purchase_forecast" type="object"
+                                string=" Borrar Pronóstico de Compras"
                                 class="btn-secondary"
-                                icon="fa-balance-scale"
-                                confirm="Esta acción igualará el Pronóstico de Ventas con la Venta Real ejecutada en todos los meses anteriores al mes actual. ¿Desea continuar?"/>
+                                icon="fa-trash"
+                                confirm="Esta acción eliminará TODOS los registros de Pronóstico de Compras para este producto. ¿Desea continuar?"/>
                         <button name="action_refresh" type="object"
                                 string="Actualizar" class="btn-primary"
                                 icon="fa-refresh"/>

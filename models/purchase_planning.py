@@ -191,52 +191,31 @@ class PurchasePlanning(models.TransientModel):
         return self[:1]._reload_form()
 
     def action_refresh(self):
-        """User-triggered refresh."""
+        """User-triggered refresh — also equalizes sales forecast to real sales."""
         self._do_refresh()
         return self[:1]._reload_form()
 
-    def action_equalize_forecast(self):
-        """Set sales forecast equal to real sales for all visible past months."""
+    def action_clear_purchase_forecast(self):
+        """Delete all purchase forecast records for the current product."""
         self.ensure_one()
-        today = fields.Date.today()
-        current_month_start = today.replace(day=1)
-        months = self._get_months_list()
-
-        allowed_company_ids = self.env.context.get(
-            'allowed_company_ids', [self.env.company.id]
-        )
-        company_ids = tuple(allowed_company_ids)
-        companies = self.env['res.company'].browse(allowed_company_ids)
-        picking_type_ids = list(set(
-            pt_id for c in companies
-            for pt_id in c.ft_advstock_planning_picking_type_ids.ids
-        ))
-
-        past_months = [m for m in months if m < current_month_start]
-        sales_map = self._get_real_sales_map(
-            self.product_id.id, company_ids, past_months, picking_type_ids
-        )
-
-        SalesForecast = self.env['ft.advstock.sales.forecast']
-        for month in past_months:
-            real_sales = sales_map.get(month, 0.0)
-            existing = SalesForecast.search([
-                ('product_id', '=', self.product_id.id),
-                ('month_date', '=', month),
-                ('company_id', '=', self.company_id.id),
-            ], limit=1)
-            if existing:
-                existing.quantity = real_sales
-            else:
-                SalesForecast.create({
-                    'product_id': self.product_id.id,
-                    'month_date': month,
-                    'quantity': real_sales,
-                    'company_id': self.company_id.id,
-                })
-
+        self.env['ft.advstock.purchase.forecast'].search([
+            ('product_id', '=', self.product_id.id),
+            ('company_id', '=', self.company_id.id),
+        ]).unlink()
         self._do_refresh()
         return self._reload_form()
+
+    def action_open_product(self):
+        """Open the product form view."""
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'res_model': 'product.product',
+            'res_id': self.product_id.id,
+            'view_mode': 'form',
+            'target': 'current',
+        }
+
 
     def action_export_xlsx(self):
         """Generate and download an Excel file with the current planning data."""
@@ -300,7 +279,51 @@ class PurchasePlanning(models.TransientModel):
     def _do_refresh(self):
         self.env['advanced.stock.reports.license'].check_license()
         for planning in self:
+            planning._equalize_sales_forecast()
             planning._compute_planning_lines()
+
+    def _equalize_sales_forecast(self):
+        """Set sales forecast equal to real sales for all past months."""
+        self.ensure_one()
+        today = fields.Date.today()
+        current_month_start = today.replace(day=1)
+        months = self._get_months_list()
+
+        allowed_company_ids = self.env.context.get(
+            'allowed_company_ids', [self.env.company.id]
+        )
+        company_ids = tuple(allowed_company_ids)
+        companies = self.env['res.company'].browse(allowed_company_ids)
+        picking_type_ids = list(set(
+            pt_id for c in companies
+            for pt_id in c.ft_advstock_planning_picking_type_ids.ids
+        ))
+
+        past_months = [m for m in months if m < current_month_start]
+        if not past_months:
+            return
+
+        sales_map = self._get_real_sales_map(
+            self.product_id.id, company_ids, past_months, picking_type_ids
+        )
+
+        SalesForecast = self.env['ft.advstock.sales.forecast']
+        for month in past_months:
+            real_sales = sales_map.get(month, 0.0)
+            existing = SalesForecast.search([
+                ('product_id', '=', self.product_id.id),
+                ('month_date', '=', month),
+                ('company_id', '=', self.company_id.id),
+            ], limit=1)
+            if existing:
+                existing.quantity = real_sales
+            else:
+                SalesForecast.create({
+                    'product_id': self.product_id.id,
+                    'month_date': month,
+                    'quantity': real_sales,
+                    'company_id': self.company_id.id,
+                })
 
     # ------------------------------------------------------------------
     # Core computation
