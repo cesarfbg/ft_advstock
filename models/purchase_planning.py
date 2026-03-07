@@ -11,16 +11,16 @@ NUM_COLS = 2 * MONTHS_WINDOW + 1  # 11
 ROW_TYPES = [
     ('initial_inventory', 'Inv. Inicial'),
     ('transit', 'Tránsito'),
-    ('projected_purchase', 'Proyección de Compra'),
+    ('purchase_forecast', 'Pronóstico de Compras'),
     ('total', 'Inv. Total'),
-    ('forecast', 'Forecast Logístico'),
+    ('sales_forecast', 'Pronóstico de Ventas'),
     ('real_sales', 'Venta Real'),
     ('deviation', 'Desviación %'),
     ('final_inventory', 'Inv. Final'),
     ('rotation', 'Días de Inventario'),
 ]
 
-EDITABLE_ROWS = {'forecast', 'projected_purchase'}
+EDITABLE_ROWS = {'sales_forecast', 'purchase_forecast'}
 INFINITY = 9999.0
 
 FLAG_SYMBOLS = {
@@ -125,7 +125,7 @@ class PurchasePlanning(models.TransientModel):
                 )
         records = super().create(vals_list)
         for rec in records:
-            rec._compute_planning_lines(reset_projections=True)
+            rec._compute_planning_lines()
         return records
 
     def write(self, vals):
@@ -174,26 +174,69 @@ class PurchasePlanning(models.TransientModel):
     def action_prev(self):
         for rec in self:
             rec.center_date = rec.center_date - relativedelta(months=1)
-        self._do_refresh(reset_projections=True)
+        self._do_refresh()
         return self[:1]._reload_form()
 
     def action_next(self):
         for rec in self:
             rec.center_date = rec.center_date + relativedelta(months=1)
-        self._do_refresh(reset_projections=True)
+        self._do_refresh()
         return self[:1]._reload_form()
 
     def action_today(self):
         today_first = fields.Date.today().replace(day=1)
         for rec in self:
             rec.center_date = today_first
-        self._do_refresh(reset_projections=True)
+        self._do_refresh()
         return self[:1]._reload_form()
 
     def action_refresh(self):
-        """User-triggered refresh — preserves projected purchase values."""
-        self._do_refresh(reset_projections=False)
+        """User-triggered refresh."""
+        self._do_refresh()
         return self[:1]._reload_form()
+
+    def action_equalize_forecast(self):
+        """Set sales forecast equal to real sales for all visible past months."""
+        self.ensure_one()
+        today = fields.Date.today()
+        current_month_start = today.replace(day=1)
+        months = self._get_months_list()
+
+        allowed_company_ids = self.env.context.get(
+            'allowed_company_ids', [self.env.company.id]
+        )
+        company_ids = tuple(allowed_company_ids)
+        companies = self.env['res.company'].browse(allowed_company_ids)
+        picking_type_ids = list(set(
+            pt_id for c in companies
+            for pt_id in c.ft_advstock_planning_picking_type_ids.ids
+        ))
+
+        past_months = [m for m in months if m < current_month_start]
+        sales_map = self._get_real_sales_map(
+            self.product_id.id, company_ids, past_months, picking_type_ids
+        )
+
+        SalesForecast = self.env['ft.advstock.sales.forecast']
+        for month in past_months:
+            real_sales = sales_map.get(month, 0.0)
+            existing = SalesForecast.search([
+                ('product_id', '=', self.product_id.id),
+                ('month_date', '=', month),
+                ('company_id', '=', self.company_id.id),
+            ], limit=1)
+            if existing:
+                existing.quantity = real_sales
+            else:
+                SalesForecast.create({
+                    'product_id': self.product_id.id,
+                    'month_date': month,
+                    'quantity': real_sales,
+                    'company_id': self.company_id.id,
+                })
+
+        self._do_refresh()
+        return self._reload_form()
 
     def action_export_xlsx(self):
         """Generate and download an Excel file with the current planning data."""
@@ -254,10 +297,10 @@ class PurchasePlanning(models.TransientModel):
             'target': 'new',
         }
 
-    def _do_refresh(self, reset_projections=True):
+    def _do_refresh(self):
         self.env['advanced.stock.reports.license'].check_license()
         for planning in self:
-            planning._compute_planning_lines(reset_projections=reset_projections)
+            planning._compute_planning_lines()
 
     # ------------------------------------------------------------------
     # Core computation
@@ -268,7 +311,7 @@ class PurchasePlanning(models.TransientModel):
         center = self.center_date.replace(day=1)
         return [center + relativedelta(months=i) for i in range(-MONTHS_WINDOW, MONTHS_WINDOW + 1)]
 
-    def _compute_planning_lines(self, reset_projections=True):
+    def _compute_planning_lines(self):
         """Compute 9 planning rows (metrics) with 11 month columns each."""
         self.ensure_one()
         company = self.company_id
@@ -277,14 +320,6 @@ class PurchasePlanning(models.TransientModel):
         current_month_start = today.replace(day=1)
 
         months = self._get_months_list()
-
-        # Read existing projected purchase values before deleting lines
-        projected_values = {}
-        if not reset_projections:
-            proj_line = self.line_ids.filtered(lambda l: l.row_type == 'projected_purchase')
-            if proj_line:
-                for i in range(NUM_COLS):
-                    projected_values[i] = _parse_float(getattr(proj_line[0], f'col_{i}', '0'))
 
         # Multicompany: aggregate across all selected companies
         allowed_company_ids = self.env.context.get('allowed_company_ids', [self.env.company.id])
@@ -302,7 +337,8 @@ class PurchasePlanning(models.TransientModel):
         initial_inv_map = self._get_initial_inventory_map(product.id, company_ids, months, excluded_loc_ids)
         transit_map = self._get_transit_map(product.id, company_ids, months, excluded_loc_ids)
         sales_map = self._get_real_sales_map(product.id, company_ids, months, picking_type_ids)
-        forecast_map = self._get_forecast_map(product.id, company_ids, months)
+        sales_forecast_map = self._get_sales_forecast_map(product.id, company_ids, months)
+        purchase_forecast_map = self._get_purchase_forecast_map(product.id, company_ids, months)
         final_inv_map = self._get_final_inventory_map(product.id, company_ids, months, excluded_loc_ids, current_month_start)
 
         # Flag thresholds (per-product override or global from main company)
@@ -337,25 +373,25 @@ class PurchasePlanning(models.TransientModel):
                 initial_inv = initial_inv_map.get(month_start, 0.0)
 
             transit = transit_map.get(month_start, 0.0)
-            proj_purchase = projected_values.get(i, 0.0)
-            total_inv = initial_inv + transit + proj_purchase
-            forecast = forecast_map.get(month_start, 0.0)
+            purchase_forecast = purchase_forecast_map.get(month_start, 0.0)
+            total_inv = initial_inv + transit + purchase_forecast
+            sales_forecast = sales_forecast_map.get(month_start, 0.0)
             real_sales = sales_map.get(month_start, 0.0) if not is_future else 0.0
 
-            if forecast and real_sales:
-                deviation = ((real_sales - forecast) / forecast) * 100
+            if sales_forecast and real_sales:
+                deviation = ((real_sales - sales_forecast) / sales_forecast) * 100
             else:
                 deviation = None  # show as "-"
 
             if is_past:
                 final_inv = final_inv_map.get(month_start, 0.0)
             else:
-                final_inv = total_inv - forecast
+                final_inv = total_inv - sales_forecast
 
             prev_final = final_inv
 
             next_month = month_start + relativedelta(months=1)
-            next_forecast = forecast_map.get(next_month, 0.0)
+            next_forecast = sales_forecast_map.get(next_month, 0.0)
             rotation = (final_inv / next_forecast) * 30 if next_forecast else INFINITY
 
             flag_val = _compute_flag(rotation, y_min, g_min, g_max, y_max)
@@ -364,9 +400,9 @@ class PurchasePlanning(models.TransientModel):
             # Format as Char for display
             row_data['initial_inventory'][col] = _fmt(initial_inv)
             row_data['transit'][col] = _fmt(transit)
-            row_data['projected_purchase'][col] = _fmt(proj_purchase)
+            row_data['purchase_forecast'][col] = _fmt(purchase_forecast)
             row_data['total'][col] = _fmt(total_inv)
-            row_data['forecast'][col] = _fmt(forecast)
+            row_data['sales_forecast'][col] = _fmt(sales_forecast)
             row_data['real_sales'][col] = _fmt(real_sales)
             row_data['final_inventory'][col] = _fmt(final_inv)
 
@@ -474,7 +510,7 @@ class PurchasePlanning(models.TransientModel):
         return result
 
     def _get_transit_map(self, product_id, company_ids, months, excluded_loc_ids):
-        """Pending receipts from confirmed POs per month."""
+        """Receipts from confirmed POs per month (both received and pending)."""
         result = {m: 0.0 for m in months}
         if not months:
             return result
@@ -497,7 +533,7 @@ class PurchasePlanning(models.TransientModel):
             JOIN purchase_order po ON po.id = pol.order_id
             WHERE sm.product_id = %%s
               AND sm.company_id IN %%s
-              AND sm.state NOT IN ('done', 'cancel')
+              AND sm.state != 'cancel'
               AND sm.date >= %%s
               AND sm.date < %%s
               AND sl_dest.usage = 'internal'
@@ -514,7 +550,11 @@ class PurchasePlanning(models.TransientModel):
         return result
 
     def _get_real_sales_map(self, product_id, company_ids, months, picking_type_ids):
-        """Done outgoing moves per month for configured picking types."""
+        """Done moves per month for configured picking types, respecting direction.
+
+        Outgoing from internal locations are summed as sales.
+        Incoming to internal locations (returns) are subtracted.
+        """
         result = {m: 0.0 for m in months}
         if not months or not picking_type_ids:
             return result
@@ -524,9 +564,17 @@ class PurchasePlanning(models.TransientModel):
 
         self.env.cr.execute("""
             SELECT DATE_TRUNC('month', sm.date)::date AS month_start,
-                   COALESCE(SUM(sm.product_uom_qty), 0) AS qty
+                   COALESCE(SUM(
+                       CASE
+                           WHEN sl_src.usage = 'internal' THEN sm.product_uom_qty
+                           WHEN sl_dest.usage = 'internal' THEN -sm.product_uom_qty
+                           ELSE 0
+                       END
+                   ), 0) AS qty
             FROM stock_move sm
             JOIN stock_picking sp ON sp.id = sm.picking_id
+            JOIN stock_location sl_src ON sl_src.id = sm.location_id
+            JOIN stock_location sl_dest ON sl_dest.id = sm.location_dest_id
             WHERE sm.product_id = %s
               AND sm.company_id IN %s
               AND sm.state = 'done'
@@ -543,11 +591,8 @@ class PurchasePlanning(models.TransientModel):
 
         return result
 
-    def _get_forecast_map(self, product_id, company_ids, months):
-        """Load logistics forecast for the product across all relevant months.
-
-        Sums forecast quantities across all selected companies.
-        """
+    def _get_sales_forecast_map(self, product_id, company_ids, months):
+        """Load sales forecast for the product across all relevant months."""
         result = {m: 0.0 for m in months}
         if not months:
             return result
@@ -556,11 +601,28 @@ class PurchasePlanning(models.TransientModel):
         extended_end = months[-1] + relativedelta(months=1)
         result[extended_end] = 0.0
 
-        forecasts = self.env['ft.advstock.logistics.forecast'].search([
+        forecasts = self.env['ft.advstock.sales.forecast'].search([
             ('product_id', '=', product_id),
             ('company_id', 'in', list(company_ids)),
             ('month_date', '>=', months[0]),
             ('month_date', '<=', extended_end),
+        ])
+        for f in forecasts:
+            result[f.month_date] = result.get(f.month_date, 0.0) + f.quantity
+
+        return result
+
+    def _get_purchase_forecast_map(self, product_id, company_ids, months):
+        """Load purchase forecast for the product across all relevant months."""
+        result = {m: 0.0 for m in months}
+        if not months:
+            return result
+
+        forecasts = self.env['ft.advstock.purchase.forecast'].search([
+            ('product_id', '=', product_id),
+            ('company_id', 'in', list(company_ids)),
+            ('month_date', '>=', months[0]),
+            ('month_date', '<=', months[-1]),
         ])
         for f in forecasts:
             result[f.month_date] = result.get(f.month_date, 0.0) + f.quantity
@@ -630,14 +692,15 @@ class PurchasePlanningLine(models.TransientModel):
         return res
 
     def write(self, vals):
-        """Sync forecast row edits back to the persistent forecast model."""
+        """Sync forecast/purchase forecast row edits back to persistent models."""
         res = super().write(vals)
         col_set = {f'col_{i}' for i in range(NUM_COLS)}
         changed_cols = col_set & set(vals)
         if changed_cols:
-            Forecast = self.env['ft.advstock.logistics.forecast']
+            SalesForecast = self.env['ft.advstock.sales.forecast']
+            PurchaseForecast = self.env['ft.advstock.purchase.forecast']
             for line in self:
-                if line.row_type != 'forecast':
+                if line.row_type not in EDITABLE_ROWS:
                     continue
                 planning = line.planning_id
                 center = planning.center_date.replace(day=1)
@@ -647,18 +710,35 @@ class PurchasePlanningLine(models.TransientModel):
                         continue
                     month = center + relativedelta(months=i - MONTHS_WINDOW)
                     qty = _parse_float(vals[col_name])
-                    existing = Forecast.search([
-                        ('product_id', '=', planning.product_id.id),
-                        ('month_date', '=', month),
-                        ('company_id', '=', planning.company_id.id),
-                    ], limit=1)
-                    if existing:
-                        existing.quantity = qty
-                    else:
-                        Forecast.create({
-                            'product_id': planning.product_id.id,
-                            'month_date': month,
-                            'quantity': qty,
-                            'company_id': planning.company_id.id,
-                        })
+
+                    if line.row_type == 'sales_forecast':
+                        existing = SalesForecast.search([
+                            ('product_id', '=', planning.product_id.id),
+                            ('month_date', '=', month),
+                            ('company_id', '=', planning.company_id.id),
+                        ], limit=1)
+                        if existing:
+                            existing.quantity = qty
+                        else:
+                            SalesForecast.create({
+                                'product_id': planning.product_id.id,
+                                'month_date': month,
+                                'quantity': qty,
+                                'company_id': planning.company_id.id,
+                            })
+                    elif line.row_type == 'purchase_forecast':
+                        existing = PurchaseForecast.search([
+                            ('product_id', '=', planning.product_id.id),
+                            ('month_date', '=', month),
+                            ('company_id', '=', planning.company_id.id),
+                        ], limit=1)
+                        if existing:
+                            existing.quantity = qty
+                        else:
+                            PurchaseForecast.create({
+                                'product_id': planning.product_id.id,
+                                'month_date': month,
+                                'quantity': qty,
+                                'company_id': planning.company_id.id,
+                            })
         return res

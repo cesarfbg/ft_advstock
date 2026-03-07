@@ -9,20 +9,18 @@
             <form string="Planeación de Compras" create="false" delete="false" duplicate="false">
                 <header>
                     <button name="action_prev" type="object"
-                            string="◀ Anterior" class="btn-secondary"
-                            icon="fa-chevron-left"/>
+                            string="◀ Anterior" class="btn-secondary"/>
                     <button name="action_today" type="object"
                             string="Hoy" class="btn-secondary"
                             icon="fa-calendar-check-o"/>
                     <button name="action_next" type="object"
-                            string="Siguiente ▶" class="btn-secondary"
-                            icon="fa-chevron-right"/>
+                            string="Siguiente ▶" class="btn-secondary"/>
                     <button name="action_export_xlsx" type="object"
-                            string="Descargar Excel" class="btn-secondary"
+                            string="Descargar" class="btn-secondary"
                             icon="fa-file-excel-o"
                             attrs="{'invisible': [('create_date', '=', False)]}"/>
                     <button name="action_change_product" type="object"
-                            string="Cambiar Producto" class="btn-link"
+                            string="Cambiar Producto" class="btn-secondary"
                             icon="fa-exchange"
                             attrs="{'invisible': [('create_date', '=', False)]}"/>
                 </header>
@@ -41,35 +39,40 @@
                         <tree editable="bottom"
                               create="false" delete="false"
                               decoration-bf="row_type == 'total' or row_type == 'final_inventory'"
-                              decoration-info="row_type == 'forecast' or row_type == 'projected_purchase'"
+                              decoration-info="row_type == 'sales_forecast' or row_type == 'purchase_forecast'"
                               decoration-muted="row_type == 'deviation'">
                             <field name="row_type" invisible="1"/>
                             <field name="row_label" string="Concepto" readonly="1"/>
                             <field name="col_0"
-                                   attrs="{'readonly': [('row_type', 'not in', ['forecast', 'projected_purchase'])]}"/>
+                                   attrs="{'readonly': [('row_type', 'not in', ['sales_forecast', 'purchase_forecast'])]}"/>
                             <field name="col_1"
-                                   attrs="{'readonly': [('row_type', 'not in', ['forecast', 'projected_purchase'])]}"/>
+                                   attrs="{'readonly': [('row_type', 'not in', ['sales_forecast', 'purchase_forecast'])]}"/>
                             <field name="col_2"
-                                   attrs="{'readonly': [('row_type', 'not in', ['forecast', 'projected_purchase'])]}"/>
+                                   attrs="{'readonly': [('row_type', 'not in', ['sales_forecast', 'purchase_forecast'])]}"/>
                             <field name="col_3"
-                                   attrs="{'readonly': [('row_type', 'not in', ['forecast', 'projected_purchase'])]}"/>
+                                   attrs="{'readonly': [('row_type', 'not in', ['sales_forecast', 'purchase_forecast'])]}"/>
                             <field name="col_4"
-                                   attrs="{'readonly': [('row_type', 'not in', ['forecast', 'projected_purchase'])]}"/>
+                                   attrs="{'readonly': [('row_type', 'not in', ['sales_forecast', 'purchase_forecast'])]}"/>
                             <field name="col_5"
-                                   attrs="{'readonly': [('row_type', 'not in', ['forecast', 'projected_purchase'])]}"/>
+                                   attrs="{'readonly': [('row_type', 'not in', ['sales_forecast', 'purchase_forecast'])]}"/>
                             <field name="col_6"
-                                   attrs="{'readonly': [('row_type', 'not in', ['forecast', 'projected_purchase'])]}"/>
+                                   attrs="{'readonly': [('row_type', 'not in', ['sales_forecast', 'purchase_forecast'])]}"/>
                             <field name="col_7"
-                                   attrs="{'readonly': [('row_type', 'not in', ['forecast', 'projected_purchase'])]}"/>
+                                   attrs="{'readonly': [('row_type', 'not in', ['sales_forecast', 'purchase_forecast'])]}"/>
                             <field name="col_8"
-                                   attrs="{'readonly': [('row_type', 'not in', ['forecast', 'projected_purchase'])]}"/>
+                                   attrs="{'readonly': [('row_type', 'not in', ['sales_forecast', 'purchase_forecast'])]}"/>
                             <field name="col_9"
-                                   attrs="{'readonly': [('row_type', 'not in', ['forecast', 'projected_purchase'])]}"/>
+                                   attrs="{'readonly': [('row_type', 'not in', ['sales_forecast', 'purchase_forecast'])]}"/>
                             <field name="col_10"
-                                   attrs="{'readonly': [('row_type', 'not in', ['forecast', 'projected_purchase'])]}"/>
+                                   attrs="{'readonly': [('row_type', 'not in', ['sales_forecast', 'purchase_forecast'])]}"/>
                         </tree>
                     </field>
-                    <div class="text-end mt-2">
+                    <div class="d-flex justify-content-between mt-2">
+                        <button name="action_equalize_forecast" type="object"
+                                string=" Igualar Pronóstico de Venta a Venta Real"
+                                class="btn-secondary"
+                                icon="fa-balance-scale"
+                                confirm="Esta acción igualará el Pronóstico de Ventas con la Venta Real ejecutada en todos los meses anteriores al mes actual. ¿Desea continuar?"/>
                         <button name="action_refresh" type="object"
                                 string="Actualizar" class="btn-primary"
                                 icon="fa-refresh"/>
@@ -123,12 +126,12 @@
         </field>
     </record>
 
-    <!-- ===== Logistics Forecast: Tree View ===== -->
-    <record id="view_logistics_forecast_tree" model="ir.ui.view">
-        <field name="name">ft.advstock.logistics.forecast.tree</field>
-        <field name="model">ft.advstock.logistics.forecast</field>
+    <!-- ===== Sales Forecast: Tree View ===== -->
+    <record id="view_sales_forecast_tree" model="ir.ui.view">
+        <field name="name">ft.advstock.sales.forecast.tree</field>
+        <field name="model">ft.advstock.sales.forecast</field>
         <field name="arch" type="xml">
-            <tree string="Forecast Logístico" editable="bottom">
+            <tree string="Pronóstico de Ventas" editable="bottom">
                 <field name="product_id"/>
                 <field name="product_categ_id"/>
                 <field name="month_date"/>
@@ -138,12 +141,12 @@
         </field>
     </record>
 
-    <!-- ===== Logistics Forecast: Form View ===== -->
-    <record id="view_logistics_forecast_form" model="ir.ui.view">
-        <field name="name">ft.advstock.logistics.forecast.form</field>
-        <field name="model">ft.advstock.logistics.forecast</field>
+    <!-- ===== Sales Forecast: Form View ===== -->
+    <record id="view_sales_forecast_form" model="ir.ui.view">
+        <field name="name">ft.advstock.sales.forecast.form</field>
+        <field name="model">ft.advstock.sales.forecast</field>
         <field name="arch" type="xml">
-            <form string="Forecast Logístico">
+            <form string="Pronóstico de Ventas">
                 <sheet>
                     <group>
                         <group>
@@ -161,12 +164,12 @@
         </field>
     </record>
 
-    <!-- ===== Logistics Forecast: Search View ===== -->
-    <record id="view_logistics_forecast_search" model="ir.ui.view">
-        <field name="name">ft.advstock.logistics.forecast.search</field>
-        <field name="model">ft.advstock.logistics.forecast</field>
+    <!-- ===== Sales Forecast: Search View ===== -->
+    <record id="view_sales_forecast_search" model="ir.ui.view">
+        <field name="name">ft.advstock.sales.forecast.search</field>
+        <field name="model">ft.advstock.sales.forecast</field>
         <field name="arch" type="xml">
-            <search string="Buscar Forecast">
+            <search string="Buscar Pronóstico de Ventas">
                 <field name="product_id"/>
                 <field name="product_categ_id"/>
                 <group expand="0" string="Agrupar por">
@@ -181,19 +184,95 @@
         </field>
     </record>
 
-    <!-- ===== Logistics Forecast: Action ===== -->
-    <record id="action_logistics_forecast" model="ir.actions.act_window">
-        <field name="name">Forecast Logístico</field>
-        <field name="res_model">ft.advstock.logistics.forecast</field>
+    <!-- ===== Sales Forecast: Action ===== -->
+    <record id="action_sales_forecast" model="ir.actions.act_window">
+        <field name="name">Pronóstico de Ventas</field>
+        <field name="res_model">ft.advstock.sales.forecast</field>
         <field name="view_mode">tree,form</field>
         <field name="domain">[('company_id', 'in', allowed_company_ids)]</field>
-        <field name="search_view_id" ref="view_logistics_forecast_search"/>
+        <field name="search_view_id" ref="view_sales_forecast_search"/>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
-                Crear un registro de forecast logístico
+                Crear un registro de pronóstico de ventas
             </p>
             <p>
-                Importe masivamente su presupuesto logístico por producto y mes
+                Importe masivamente su pronóstico de ventas por producto y mes
+                usando el importador nativo de Odoo (botón Favoritos → Importar registros).
+            </p>
+        </field>
+    </record>
+
+    <!-- ===== Purchase Forecast: Tree View ===== -->
+    <record id="view_purchase_forecast_tree" model="ir.ui.view">
+        <field name="name">ft.advstock.purchase.forecast.tree</field>
+        <field name="model">ft.advstock.purchase.forecast</field>
+        <field name="arch" type="xml">
+            <tree string="Pronóstico de Compras" editable="bottom">
+                <field name="product_id"/>
+                <field name="product_categ_id"/>
+                <field name="month_date"/>
+                <field name="quantity"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- ===== Purchase Forecast: Form View ===== -->
+    <record id="view_purchase_forecast_form" model="ir.ui.view">
+        <field name="name">ft.advstock.purchase.forecast.form</field>
+        <field name="model">ft.advstock.purchase.forecast</field>
+        <field name="arch" type="xml">
+            <form string="Pronóstico de Compras">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="product_id"/>
+                            <field name="product_categ_id"/>
+                        </group>
+                        <group>
+                            <field name="month_date"/>
+                            <field name="quantity"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- ===== Purchase Forecast: Search View ===== -->
+    <record id="view_purchase_forecast_search" model="ir.ui.view">
+        <field name="name">ft.advstock.purchase.forecast.search</field>
+        <field name="model">ft.advstock.purchase.forecast</field>
+        <field name="arch" type="xml">
+            <search string="Buscar Pronóstico de Compras">
+                <field name="product_id"/>
+                <field name="product_categ_id"/>
+                <group expand="0" string="Agrupar por">
+                    <filter name="group_product" string="Producto"
+                            context="{'group_by': 'product_id'}"/>
+                    <filter name="group_category" string="Categoría"
+                            context="{'group_by': 'product_categ_id'}"/>
+                    <filter name="group_month" string="Mes"
+                            context="{'group_by': 'month_date'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- ===== Purchase Forecast: Action ===== -->
+    <record id="action_purchase_forecast" model="ir.actions.act_window">
+        <field name="name">Pronóstico de Compras</field>
+        <field name="res_model">ft.advstock.purchase.forecast</field>
+        <field name="view_mode">tree,form</field>
+        <field name="domain">[('company_id', 'in', allowed_company_ids)]</field>
+        <field name="search_view_id" ref="view_purchase_forecast_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Crear un registro de pronóstico de compras
+            </p>
+            <p>
+                Importe masivamente su pronóstico de compras por producto y mes
                 usando el importador nativo de Odoo (botón Favoritos → Importar registros).
             </p>
         </field>

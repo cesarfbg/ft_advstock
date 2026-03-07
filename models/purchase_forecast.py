@@ -6,15 +6,15 @@ def _normalize_to_first(date):
     return date.replace(day=1) if date else date
 
 
-class LogisticsForecast(models.Model):
-    _name = 'ft.advstock.logistics.forecast'
-    _description = 'Presupuesto Logístico por Producto/Mes'
+class PurchaseForecast(models.Model):
+    _name = 'ft.advstock.purchase.forecast'
+    _description = 'Pronóstico de Compras por Producto/Mes'
     _order = 'product_id, month_date'
     _rec_name = 'product_id'
     _sql_constraints = [
         ('product_month_company_uniq',
          'unique(product_id, month_date, company_id)',
-         'Ya existe un presupuesto para este producto en este mes y compañía.'),
+         'Ya existe un pronóstico de compras para este producto en este mes y compañía.'),
     ]
 
     product_id = fields.Many2one(
@@ -32,12 +32,12 @@ class LogisticsForecast(models.Model):
     month_date = fields.Date(
         string='Mes',
         required=True,
-        help='Primer día del mes al que corresponde el presupuesto.',
+        help='Primer día del mes al que corresponde el pronóstico de compras.',
     )
     quantity = fields.Float(
-        string='Cantidad Presupuestada',
+        string='Cantidad Pronosticada',
         default=0.0,
-        help='Cantidad estimada de venta/salida para este producto en este mes.',
+        help='Cantidad estimada de compra/entrada para este producto en este mes.',
     )
     company_id = fields.Many2one(
         'res.company',

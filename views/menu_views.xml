@@ -49,10 +49,16 @@
               action="action_product_flag_config"
               sequence="10"/>
 
-    <menuitem id="menu_ft_advstock_config_forecast"
-              name="Forecast Logístico"
+    <menuitem id="menu_ft_advstock_config_sales_forecast"
+              name="Pronóstico de Ventas"
               parent="menu_ft_advstock_config_root"
-              action="action_logistics_forecast"
+              action="action_sales_forecast"
               sequence="20"/>
+
+    <menuitem id="menu_ft_advstock_config_purchase_forecast"
+              name="Pronóstico de Compras"
+              parent="menu_ft_advstock_config_root"
+              action="action_purchase_forecast"
+              sequence="30"/>
 
 </odoo>
