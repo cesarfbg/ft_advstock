@@ -335,7 +335,7 @@ class PurchasePlanning(models.TransientModel):
 
         # Gather data in batch
         initial_inv_map = self._get_initial_inventory_map(product.id, company_ids, months, excluded_loc_ids)
-        transit_map = self._get_transit_map(product.id, company_ids, months, excluded_loc_ids)
+        transit_map = self._get_transit_map(product.id, company_ids, months)
         sales_map = self._get_real_sales_map(product.id, company_ids, months, picking_type_ids)
         sales_forecast_map = self._get_sales_forecast_map(product.id, company_ids, months)
         purchase_forecast_map = self._get_purchase_forecast_map(product.id, company_ids, months)
@@ -509,8 +509,13 @@ class PurchasePlanning(models.TransientModel):
 
         return result
 
-    def _get_transit_map(self, product_id, company_ids, months, excluded_loc_ids):
-        """Receipts from confirmed POs per month (both received and pending)."""
+    def _get_transit_map(self, product_id, company_ids, months):
+        """Ordered quantities from confirmed POs per month.
+
+        Queries purchase.order.line directly using date_planned.
+        Includes all PO states past RFQ (purchase, done/locked),
+        excluding only draft, sent, and cancelled.
+        """
         result = {m: 0.0 for m in months}
         if not months:
             return result
@@ -518,29 +523,18 @@ class PurchasePlanning(models.TransientModel):
         date_from = months[0]
         date_to = months[-1] + relativedelta(months=1)
 
-        excluded_clause = ""
-        excluded_params = []
-        if excluded_loc_ids:
-            excluded_clause = "AND sl_dest.id NOT IN %s"
-            excluded_params = [tuple(excluded_loc_ids)]
-
         self.env.cr.execute("""
-            SELECT DATE_TRUNC('month', sm.date)::date AS month_start,
-                   COALESCE(SUM(sm.product_uom_qty), 0) AS qty
-            FROM stock_move sm
-            JOIN stock_location sl_dest ON sl_dest.id = sm.location_dest_id
-            JOIN purchase_order_line pol ON pol.id = sm.purchase_line_id
+            SELECT DATE_TRUNC('month', pol.date_planned)::date AS month_start,
+                   COALESCE(SUM(pol.product_qty), 0) AS qty
+            FROM purchase_order_line pol
             JOIN purchase_order po ON po.id = pol.order_id
-            WHERE sm.product_id = %%s
-              AND sm.company_id IN %%s
-              AND sm.state != 'cancel'
-              AND sm.date >= %%s
-              AND sm.date < %%s
-              AND sl_dest.usage = 'internal'
-              AND po.state = 'purchase'
-              %s
-            GROUP BY DATE_TRUNC('month', sm.date)
-        """ % excluded_clause, [product_id, company_ids, date_from, date_to] + excluded_params)
+            WHERE pol.product_id = %s
+              AND po.company_id IN %s
+              AND po.state NOT IN ('draft', 'sent', 'cancel')
+              AND pol.date_planned >= %s
+              AND pol.date_planned < %s
+            GROUP BY DATE_TRUNC('month', pol.date_planned)
+        """, [product_id, company_ids, date_from, date_to])
 
         for row in self.env.cr.fetchall():
             month_key = row[0]
