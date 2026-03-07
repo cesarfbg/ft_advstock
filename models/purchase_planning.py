@@ -536,12 +536,14 @@ class PurchasePlanning(models.TransientModel):
         """Receipts from confirmed POs per month via stock moves (pickings).
 
         Queries stock_move linked to purchase order lines to get the actual
-        receipt date instead of the PO's date_planned.
+        receipt/return date instead of the PO's date_planned.
+
+        Direction is detected by the supplier location:
+        - Source = supplier → receipt (+qty)
+        - Destination = supplier → return to vendor (-qty)
 
         Current month: includes both done and pending moves (full picture).
         Other months: only pending moves (not yet received).
-        Returns handle direction: incoming to internal = receipt (+),
-        outgoing from internal = return (-).
         """
         result = {m: 0.0 for m in months}
         if not months:
@@ -554,9 +556,9 @@ class PurchasePlanning(models.TransientModel):
             SELECT DATE_TRUNC('month', sm.date)::date AS month_start,
                    COALESCE(SUM(
                        CASE
-                           WHEN sl_src.usage != 'internal' AND sl_dest.usage = 'internal'
+                           WHEN sl_src.usage = 'supplier'
                                THEN sm.product_uom_qty
-                           WHEN sl_src.usage = 'internal' AND sl_dest.usage != 'internal'
+                           WHEN sl_dest.usage = 'supplier'
                                THEN -sm.product_uom_qty
                            ELSE 0
                        END
