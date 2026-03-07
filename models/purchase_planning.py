@@ -533,11 +533,12 @@ class PurchasePlanning(models.TransientModel):
         return result
 
     def _get_transit_map(self, product_id, company_ids, months):
-        """Ordered quantities from confirmed POs per month.
+        """Quantities from pickings associated with confirmed POs per month.
 
-        Queries purchase.order.line directly using date_planned.
-        Includes all PO states past RFQ (purchase, done/locked),
-        excluding only draft, sent, and cancelled.
+        Uses stock.move linked via purchase_line_id to get actual (for done)
+        or scheduled (for pending) reception dates.
+        Incoming to internal locations are summed, outgoing from internal
+        (returns to vendor) are subtracted.
         """
         result = {m: 0.0 for m in months}
         if not months:
@@ -547,16 +548,26 @@ class PurchasePlanning(models.TransientModel):
         date_to = months[-1] + relativedelta(months=1)
 
         self.env.cr.execute("""
-            SELECT DATE_TRUNC('month', pol.date_planned)::date AS month_start,
-                   COALESCE(SUM(pol.product_qty), 0) AS qty
-            FROM purchase_order_line pol
+            SELECT DATE_TRUNC('month', sm.date)::date AS month_start,
+                   COALESCE(SUM(
+                       CASE
+                           WHEN sl_dest.usage = 'internal' THEN sm.product_uom_qty
+                           WHEN sl_src.usage = 'internal' THEN -sm.product_uom_qty
+                           ELSE 0
+                       END
+                   ), 0) AS qty
+            FROM stock_move sm
+            JOIN stock_location sl_src ON sl_src.id = sm.location_id
+            JOIN stock_location sl_dest ON sl_dest.id = sm.location_dest_id
+            JOIN purchase_order_line pol ON pol.id = sm.purchase_line_id
             JOIN purchase_order po ON po.id = pol.order_id
-            WHERE pol.product_id = %s
+            WHERE sm.product_id = %s
               AND po.company_id IN %s
+              AND sm.state != 'cancel'
               AND po.state NOT IN ('draft', 'sent', 'cancel')
-              AND pol.date_planned >= %s
-              AND pol.date_planned < %s
-            GROUP BY DATE_TRUNC('month', pol.date_planned)
+              AND sm.date >= %s
+              AND sm.date < %s
+            GROUP BY DATE_TRUNC('month', sm.date)
         """, [product_id, company_ids, date_from, date_to])
 
         for row in self.env.cr.fetchall():
