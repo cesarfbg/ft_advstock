@@ -5,7 +5,7 @@
     <menuitem id="menu_ft_advstock_root"
               name="Inventario Avanzado"
               parent="stock.menu_warehouse_report"
-              sequence="40"/>
+              sequence="200"/>
 
     <menuitem id="menu_inventory_rotation"
               name="Rotación de Inventarios"
@@ -23,7 +23,7 @@
     <menuitem id="menu_ft_advstock_purchase_root"
               name="Inventario Avanzado"
               parent="purchase.purchase_report_main"
-              sequence="40"/>
+              sequence="200"/>
 
     <menuitem id="menu_purchase_inventory_rotation"
               name="Rotación de Inventarios"
