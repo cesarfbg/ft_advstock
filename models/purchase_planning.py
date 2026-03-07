@@ -358,7 +358,7 @@ class PurchasePlanning(models.TransientModel):
 
         # Gather data in batch
         initial_inv_map = self._get_initial_inventory_map(product.id, company_ids, months, excluded_loc_ids)
-        transit_map = self._get_transit_map(product.id, company_ids, months, current_month_start)
+        transit_map = self._get_transit_map(product.id, company_ids, months)
         sales_map = self._get_real_sales_map(product.id, company_ids, months, picking_type_ids)
         sales_forecast_map = self._get_sales_forecast_map(product.id, company_ids, months)
         purchase_forecast_map = self._get_purchase_forecast_map(product.id, company_ids, months)
@@ -532,18 +532,18 @@ class PurchasePlanning(models.TransientModel):
 
         return result
 
-    def _get_transit_map(self, product_id, company_ids, months, current_month_start):
+    def _get_transit_map(self, product_id, company_ids, months):
         """Receipts from confirmed POs per month via stock moves (pickings).
 
         Queries stock_move linked to purchase order lines to get the actual
         receipt/return date instead of the PO's date_planned.
 
-        Direction is detected by the supplier location:
+        Direction is detected by the supplier location (usage='supplier'),
+        which is an internal Odoo type independent of the display name:
         - Source = supplier → receipt (+qty)
         - Destination = supplier → return to vendor (-qty)
 
-        Current month: includes both done and pending moves (full picture).
-        Other months: only pending moves (not yet received).
+        Includes all non-cancelled moves (done + pending) for every month.
         """
         result = {m: 0.0 for m in months}
         if not months:
@@ -569,16 +569,11 @@ class PurchasePlanning(models.TransientModel):
             WHERE sm.product_id = %s
               AND sm.company_id IN %s
               AND sm.purchase_line_id IS NOT NULL
+              AND sm.state != 'cancel'
               AND sm.date >= %s
               AND sm.date < %s
-              AND (
-                  (DATE_TRUNC('month', sm.date)::date = %s AND sm.state != 'cancel')
-                  OR
-                  (DATE_TRUNC('month', sm.date)::date != %s AND sm.state NOT IN ('done', 'cancel'))
-              )
             GROUP BY DATE_TRUNC('month', sm.date)
-        """, [product_id, company_ids, date_from, date_to,
-              current_month_start, current_month_start])
+        """, [product_id, company_ids, date_from, date_to])
 
         for row in self.env.cr.fetchall():
             month_key = row[0]
