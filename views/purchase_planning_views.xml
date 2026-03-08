@@ -33,7 +33,7 @@
                         <field name="company_id"/>
                     </group>
                     <div class="text-center mb16">
-                        <h1 style="font-weight: bold; font-size: 2.2rem; margin-bottom: 5px;">Planeación de Compras (xxx)</h1>
+                        <h1 style="font-weight: bold; font-size: 2.2rem; margin-bottom: 5px;">Planeación de Compras</h1>
                         <button name="action_open_product" type="object"
                                 class="oe_link p-0"
                                 style="font-size: 1.8rem; font-weight: bold; text-decoration: none; color: #4c4c4c;">
