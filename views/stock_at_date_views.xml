@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ===== Wizard Form (initial + results) ===== -->
+    <record id="view_stock_at_date_wizard_form" model="ir.ui.view">
+        <field name="name">ft.advstock.stock.at.date.wizard.form</field>
+        <field name="model">ft.advstock.stock.at.date.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Inventario a la Fecha">
+
+                <!-- Initial state: select date and compute -->
+                <group attrs="{'invisible': [('line_ids', '!=', [])]}">
+                    <group>
+                        <field name="date"/>
+                    </group>
+                </group>
+
+                <footer attrs="{'invisible': [('line_ids', '!=', [])]}">
+                    <button name="action_compute" type="object"
+                            string="Calcular" class="btn-primary"
+                            icon="fa-calculator"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                </footer>
+
+                <!-- Results state: show computed lines -->
+                <div attrs="{'invisible': [('line_ids', '=', [])]}">
+                    <div class="d-flex align-items-center mb-3">
+                        <h3 class="mb-0 me-3">
+                            Inventario al <field name="date" widget="datetime"
+                                                 readonly="1" class="oe_inline"/>
+                        </h3>
+                        <button name="action_compute" type="object"
+                                string="Recalcular" class="btn-secondary btn-sm ms-2"
+                                icon="fa-refresh"/>
+                    </div>
+
+                    <field name="line_ids" nolabel="1" readonly="1">
+                        <tree string="Inventario a la Fecha"
+                              decoration-muted="quantity == 0"
+                              default_order="warehouse_name, location_name, product_name">
+                            <field name="warehouse_name"/>
+                            <field name="location_name" string="Ubicación"/>
+                            <field name="product_name" string="Producto"/>
+                            <field name="product_categ_id" string="Categoría"
+                                   optional="hide"/>
+                            <field name="lot_name" string="Lote/Serie"/>
+                            <field name="quantity" sum="Total"/>
+                            <field name="uom_id" string="UdM"/>
+                            <!-- Hidden fields for grouping -->
+                            <field name="location_id" invisible="1"/>
+                            <field name="product_id" invisible="1"/>
+                            <field name="lot_id" invisible="1"/>
+                        </tree>
+                    </field>
+                </div>
+
+            </form>
+        </field>
+    </record>
+
+    <!-- ===== Action ===== -->
+    <record id="action_stock_at_date_wizard" model="ir.actions.act_window">
+        <field name="name">Inventario a la Fecha</field>
+        <field name="res_model">ft.advstock.stock.at.date.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+</odoo>

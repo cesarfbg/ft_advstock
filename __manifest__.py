@@ -1,6 +1,6 @@
 {
     'name': 'Inventario Avanzado (Feral Tech)',
-    'version': '16.0.3.0.0',
+    'version': '16.0.4.0.0',
     'category': 'Inventory/Reporting',
     'summary': 'Reportes avanzados de rotación de inventarios y planeación de compras.',
     'description': """
@@ -26,6 +26,7 @@
         'views/product_flag_config_views.xml',
         'views/purchase_planning_views.xml',
         'views/res_config_settings_views.xml',
+        'views/stock_at_date_views.xml',
         'wizard/inventory_rotation_wizard_views.xml',
         'views/menu_views.xml',
     ],

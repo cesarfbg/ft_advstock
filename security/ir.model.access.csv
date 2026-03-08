@@ -8,3 +8,5 @@ access_ft_advstock_purchase_forecast_user,ft.advstock.purchase.forecast.user,mod
 access_ft_advstock_purchase_planning_user,ft.advstock.purchase.planning.user,model_ft_advstock_purchase_planning,stock.group_stock_user,1,1,1,1
 access_ft_advstock_planning_line_user,ft.advstock.planning.line.user,model_ft_advstock_planning_line,stock.group_stock_user,1,1,1,1
 access_ft_advstock_planning_product_wizard_user,ft.advstock.planning.product.wizard.user,model_ft_advstock_planning_product_wizard,stock.group_stock_user,1,1,1,1
+access_ft_advstock_stock_at_date_wizard_user,ft.advstock.stock.at.date.wizard.user,model_ft_advstock_stock_at_date_wizard,stock.group_stock_user,1,1,1,1
+access_ft_advstock_stock_at_date_line_user,ft.advstock.stock.at.date.line.user,model_ft_advstock_stock_at_date_line,stock.group_stock_user,1,1,1,1

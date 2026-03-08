@@ -19,6 +19,12 @@
               action="action_purchase_planning_open"
               sequence="20"/>
 
+    <menuitem id="menu_stock_at_date"
+              name="Inventario a la Fecha"
+              parent="menu_ft_advstock_root"
+              action="action_stock_at_date_wizard"
+              sequence="30"/>
+
     <!-- ===== Purchase > Reports > Inventario Avanzado ===== -->
     <menuitem id="menu_ft_advstock_purchase_root"
               name="Inventario Avanzado"
@@ -36,6 +42,12 @@
               parent="menu_ft_advstock_purchase_root"
               action="action_purchase_planning_open"
               sequence="20"/>
+
+    <menuitem id="menu_purchase_stock_at_date"
+              name="Inventario a la Fecha"
+              parent="menu_ft_advstock_purchase_root"
+              action="action_stock_at_date_wizard"
+              sequence="30"/>
 
     <!-- ===== Inventory > Configuration > Inventario Avanzado ===== -->
     <menuitem id="menu_ft_advstock_config_root"
