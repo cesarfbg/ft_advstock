@@ -21,7 +21,7 @@ class StockAtDateWizard(models.TransientModel):
     )
 
     def action_compute(self):
-        """Compute stock at the selected date and display results."""
+        """Compute stock at the selected date and open results form."""
         self.ensure_one()
         self.env['advanced.stock.reports.license'].check_license()
 
@@ -54,18 +54,21 @@ class StockAtDateWizard(models.TransientModel):
             ]):
                 wh_by_loc[loc.id] = wh.name
 
-        # Build result lines
-        self.line_ids.unlink()
-        line_vals = []
-
         # Pre-fetch related records for performance
-        product_ids = list(set(k[0] for k in stock_data))
+        product_ids_set = list(set(k[0] for k in stock_data))
         location_ids_used = list(set(k[1] for k in stock_data))
         lot_ids = list(set(k[2] for k in stock_data if k[2]))
 
-        products = {p.id: p for p in self.env['product.product'].browse(product_ids)}
+        products = {p.id: p for p in self.env['product.product'].browse(product_ids_set)}
         locations = {l.id: l for l in self.env['stock.location'].browse(location_ids_used)}
         lots = {l.id: l for l in self.env['stock.lot'].browse(lot_ids)} if lot_ids else {}
+
+        # Delete previous results from this wizard and create new ones
+        Line = self.env['ft.advstock.stock.at.date.line']
+        Line.search([('wizard_id', '=', self.id)]).unlink()
+
+        line_vals = []
+        cutoff_date = self.date
 
         for (product_id, location_id, lot_id), qty in stock_data.items():
             if not qty:
@@ -78,6 +81,7 @@ class StockAtDateWizard(models.TransientModel):
 
             line_vals.append({
                 'wizard_id': self.id,
+                'cutoff_date': cutoff_date,
                 'warehouse_name': wh_by_loc.get(location_id, ''),
                 'location_id': location_id,
                 'location_name': location.complete_name,
@@ -91,15 +95,28 @@ class StockAtDateWizard(models.TransientModel):
             })
 
         if line_vals:
-            self.env['ft.advstock.stock.at.date.line'].create(line_vals)
+            Line.create(line_vals)
 
+        # Open results in full-page form view of the wizard
         return {
             'type': 'ir.actions.act_window',
+            'name': _('Inventario al %s') % fields.Datetime.to_string(cutoff_date),
             'res_model': self._name,
             'res_id': self.id,
             'view_mode': 'form',
+            'view_id': self.env.ref(
+                'ft_advstock.view_stock_at_date_results_form'
+            ).id,
+            'target': 'current',
+        }
+
+    def action_new_query(self):
+        """Open the wizard dialog again to select a new date."""
+        return {
+            'type': 'ir.actions.act_window',
+            'res_model': self._name,
+            'view_mode': 'form',
             'target': 'new',
-            'context': {**self.env.context, 'stock_at_date_computed': True},
         }
 
     # ------------------------------------------------------------------
@@ -238,8 +255,9 @@ class StockAtDateLine(models.TransientModel):
 
     wizard_id = fields.Many2one(
         'ft.advstock.stock.at.date.wizard', string='Wizard',
-        required=True, ondelete='cascade',
+        ondelete='cascade',
     )
+    cutoff_date = fields.Datetime(string='Fecha de Corte', readonly=True)
     warehouse_name = fields.Char(string='Almacén')
     location_id = fields.Many2one('stock.location', string='Ubicación')
     location_name = fields.Char(string='Ubicación (Nombre)')
