@@ -50,7 +50,7 @@ class StockAtDateWizard(models.TransientModel):
         ])
         for wh in warehouses:
             for loc in self.env['stock.location'].search([
-                ('id', 'child_of', wh.lot_stock_id.id),
+                ('id', 'child_of', wh.view_location_id.id),
             ]):
                 wh_by_loc[loc.id] = wh.name
 
