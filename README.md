@@ -1,163 +1,209 @@
 # Inventario Avanzado (Feral Tech)
 
-**Versión:** 16.0.2.0.0
+**Version:** 16.0.4.0.0
 **Compatibilidad:** Odoo 16 Community & Enterprise
 **Autor:** [Feral Tech](https://feraltech.co)
 
 ---
 
-## Descripción
+## Descripcion
 
-**Inventario Avanzado** es un módulo de reportes que proporciona herramientas de análisis para la gestión de inventarios. Permite evaluar la rotación de productos, identificar stock de baja o alta rotación mediante un sistema de flags visual, y tomar decisiones informadas sobre reabastecimiento.
+**Inventario Avanzado** es una suite de herramientas de analisis y planeacion para la gestion de inventarios. Permite evaluar la rotacion de productos, planificar compras con proyecciones mensuales, consultar el inventario historico a cualquier fecha, y tomar decisiones informadas sobre reabastecimiento con un sistema visual de alertas por colores.
 
 ---
 
 ## Funcionalidades
 
-### Reporte de Rotación de Inventarios
+### 1. Rotacion de Inventarios
 
-Accesible desde **Inventario > Reportes > Inventario Avanzado > Rotación de Inventarios**.
+Accesible desde **Inventario > Reportes > Inventario Avanzado > Rotacion de Inventarios**.
 
-Este reporte analiza el movimiento de tus productos dentro de un rango de fechas seleccionado y muestra:
+Analiza el movimiento de tus productos dentro de un rango de fechas y muestra indicadores clave:
 
-| Indicador | Descripción |
-|-----------|-------------|
-| **Flag** | Flags visuales (🟢🟡🔴) con flecha de tendencia (↑↓) |
-| **Producto** | Nombre del producto (clic para abrir la ficha del producto) |
-| **Saliente Total** | Cantidad total vendida/despachada en el periodo |
-| **Saliente Prom./Mes** | Promedio mensual basado en días exactos del rango |
-| **Entrante Pendiente** | Cantidad en órdenes pendientes por recibir |
+| Columna | Descripcion |
+|---------|-------------|
+| **Flag** | Indicador visual con color y tendencia (ver seccion Flags) |
+| **Producto** | Nombre del producto (clic para abrir la ficha) |
+| **Categoria** | Categoria del producto (columna opcional) |
+| **Saliente Total** | Cantidad total despachada en el periodo |
+| **Saliente Prom./Mes** | Promedio mensual basado en dias exactos del rango |
+| **Entrante Pendiente** | Cantidad en ordenes pendientes por recibir |
 | **Stock a la Mano** | Inventario actual disponible |
-| **Rotación (Meses)** | Cuántos meses de inventario tienes considerando stock + entrante |
-| **Rotación (Días)** | Equivalente en días (9999 cuando no hay ventas) |
+| **Rotacion (Meses)** | Meses de inventario disponibles al ritmo actual |
+| **Rotacion (Dias)** | Equivalente en dias (9999 indica rotacion nula) |
 
-Todas las columnas numéricas son ordenables de mayor a menor y viceversa.
+Todas las columnas numericas son ordenables.
 
-#### Cálculo del promedio mensual
-
-El promedio mensual se calcula con precisión basada en los **días exactos** del rango seleccionado:
+#### Calculo del promedio mensual
 
 ```
-promedio_mensual = saliente_total / días_en_rango × 30
+promedio_mensual = saliente_total / dias_en_rango x 30
 ```
 
-Esto asegura que un rango de 45 días con 22 ventas dé un promedio de 14.67/mes, no 11/mes como daría al dividir por 2 meses calendario.
+Esto asegura precision con cualquier rango de fechas, ya que se basa en los dias exactos del periodo seleccionado.
 
-#### Fórmula de rotación
-
-La rotación se calcula incluyendo tanto el stock actual como el inventario entrante pendiente:
+#### Formula de rotacion
 
 ```
-rotación_meses = (stock_a_la_mano + entrante_pendiente) / promedio_mensual
-rotación_días = rotación_meses × 30
+rotacion_meses = (stock_a_la_mano + entrante_pendiente) / promedio_mensual
+rotacion_dias = rotacion_meses x 30
 ```
 
-Cuando un producto tiene stock pero cero ventas en el período, la rotación se muestra como 9999 (tanto en días como en meses) para indicar rotación nula y permitir el ordenamiento correcto.
+Cuando un producto tiene stock pero cero ventas, la rotacion se muestra como **9999** para indicar rotacion nula y permitir el ordenamiento correcto.
 
 #### Entrante futuro
 
-El wizard permite opcionalmente **extender la ventana de búsqueda del inventario entrante** más allá del período de análisis de ventas. Esto es útil para incluir órdenes de compra que llegarán en un futuro cercano:
+El wizard permite extender la ventana de busqueda del inventario entrante mas alla del periodo de analisis:
 
-1. Marca la opción **"Incluir Entrante Futuro"**.
-2. Indica la **Fecha Tope Entrante** (debe ser igual o posterior a la fecha fin del período).
-3. Las ventas se calculan usando el rango original, pero el entrante incluye movimientos pendientes hasta la fecha tope.
+1. Marca la opcion **"Incluir Entrante Futuro"**.
+2. Indica la **Fecha Tope Entrante** (debe ser igual o posterior a la fecha fin).
+3. Las ventas se calculan con el rango original, pero el entrante incluye movimientos pendientes hasta la fecha tope.
 
-#### Mostrar decimales
+### 2. Sistema de Flags
 
-En los ajustes del módulo se puede activar o desactivar la opción **"Mostrar Decimales"**:
-
-- **Activado**: todas las columnas numéricas del reporte muestran **2 decimales**.
-- **Desactivado** (por defecto): los números se redondean a **enteros** sin mostrar `,00`.
-
-En ambos modos las columnas permanecen ordenables.
-
-### Sistema de Flags
-
-Cada producto en el reporte muestra un indicador visual basado en sus días de rotación:
+Cada producto muestra un indicador visual basado en sus dias de rotacion:
 
 | Flag | Significado |
 |------|-------------|
-| 🟢 | Rotación saludable (dentro del rango verde) |
-| 🟡 ↓ | Alerta por déficit de stock (rotación baja, entre amarillo min y verde min) |
-| 🟡 ↑ | Alerta por exceso de stock (rotación alta, entre verde max y amarillo max) |
-| 🔴 ↓ | Crítico por déficit (rotación por debajo del amarillo min) |
-| 🔴 ↑ | Crítico por exceso (rotación por encima del amarillo max) |
+| 🟢 | Rotacion saludable (dentro del rango verde) |
+| 🟡 ↓ | Alerta por deficit de stock |
+| 🟡 ↑ | Alerta por exceso de stock |
+| 🔴 ↓ | Critico por deficit |
+| 🔴 ↑ | Critico por exceso |
 
-Las filas del reporte se decoran con colores de fondo según el flag y se pueden filtrar y agrupar por color.
+Las filas del reporte se decoran con colores de fondo segun el flag. Se pueden filtrar y agrupar por color.
 
-#### Configuración de rangos predeterminados
+#### Configuracion de rangos
 
-En **Ajustes > Feral Tech > Inventario Avanzado** (sección derecha), configura los 4 límites:
+En **Ajustes > Feral Tech > Inventario Avanzado**, configura los 4 limites:
 
-| Campo | Default | Descripción |
+| Campo | Default | Descripcion |
 |-------|---------|-------------|
-| Amarillo Min | 25 días | Por debajo → rojo ↓ |
-| Verde Min | 30 días | Inicio del rango saludable |
-| Verde Max | 60 días | Fin del rango saludable |
-| Amarillo Max | 65 días | Por encima → rojo ↑ |
+| Amarillo Min | 25 dias | Por debajo -> rojo ↓ |
+| Verde Min | 30 dias | Inicio del rango saludable |
+| Verde Max | 60 dias | Fin del rango saludable |
+| Amarillo Max | 65 dias | Por encima -> rojo ↑ |
 
-Validaciones automáticas aseguran que: Amarillo Min < Verde Min < Verde Max < Amarillo Max.
+Validaciones automaticas aseguran que: Amarillo Min < Verde Min < Verde Max < Amarillo Max.
 
 #### Flags personalizadas por producto
 
-Es posible configurar rangos de rotación específicos para productos individuales que tienen comportamientos diferentes al estándar. Accesible desde:
+Configura rangos especificos para productos con comportamiento diferente al estandar:
 
-- **Inventario > Configuración > Inventario Avanzado > Flags de Rotación** (gestión masiva en lista editable).
-- **Botón "Configurar Flags por Producto"** en los ajustes de Inventario Avanzado.
-- **Pestaña "Inventario"** dentro de la ficha de cada producto (checkbox "Usar Flags de Rotación Personalizadas" + 4 campos de rangos).
+- **Inventario > Configuracion > Inventario Avanzado > Flags de Rotacion** (lista editable).
+- **Boton "Configurar Flags por Producto"** en los ajustes.
+- **Pestana "Inventario"** en la ficha de cada producto.
 
-Los tres puntos de acceso operan sobre el mismo modelo, por lo que los cambios se sincronizan automáticamente. Los productos con configuración personalizada usan sus propios rangos; el resto usa los valores predeterminados de la compañía. En entornos multi-compañía, cada compañía gestiona su propia configuración de flags por producto.
+Los tres accesos operan sobre el mismo modelo y se sincronizan automaticamente.
 
-### Filtros y agrupaciones
+### 3. Planeacion de Compras
 
-- **Con Salidas**: Muestra solo productos que tuvieron movimiento.
-- **Con Stock**: Muestra solo productos con inventario positivo.
-- **Por color de flag**: Filtra por rojo, amarillo o verde.
-- **Agrupación**: Por producto, categoría o flag.
+Accesible desde **Inventario > Reportes > Inventario Avanzado > Planeacion de Compras**.
 
-### Presets de ubicación
+Herramienta de planificacion que muestra una grilla de 11 meses (5 anteriores + actual + 5 futuros) por producto con las siguientes metricas:
 
-Puedes guardar combinaciones de ubicaciones que usas frecuentemente con un nombre personalizado y cargarlas rápidamente en futuros reportes. Ideal si manejas múltiples bodegas y necesitas analizarlas por grupos.
+| Fila | Descripcion | Editable |
+|------|-------------|----------|
+| **Inv. Inicial** | Stock al inicio de cada mes | No |
+| **Transito** | Recepciones de compras confirmadas/realizadas | No |
+| **Pronostico de Compras** | Cantidad que planeas comprar | Si |
+| **Inv. Total** | Inv. Inicial + Transito + Pronostico de Compras | No |
+| **Pronostico de Ventas** | Cantidad que esperas vender | Si |
+| **Venta Real** | Ventas efectivamente realizadas (meses pasados) | No |
+| **Inv. Final** | Inv. Total - Pronostico de Ventas | No |
+| **Dias de Inventario** | Dias de cobertura con flag de color | No |
 
-### Planeación de Reorden (Próximamente)
+#### Caracteristicas de la planeacion
 
-Funcionalidad en desarrollo que permitirá planificar compras basándose en los datos de rotación de inventario.
+- **Navegacion mensual** con botones para desplazar la ventana temporal.
+- **Pronosticos editables** directamente en la grilla.
+- **Exportacion a Excel** con formato y colores.
+- **Exclusion de ubicaciones** configurable en ajustes (ej: excluir bodega de vencidos).
+- **Tipos de picking configurables** para el calculo de transito.
+- **Multi-empresa** con agregacion de datos por todas las empresas seleccionadas.
+
+### 4. Inventario a la Fecha
+
+Accesible desde **Inventario > Reportes > Inventario Avanzado > Inventario a la Fecha**.
+
+Reconstruye el inventario historico a cualquier fecha seleccionada, discriminado por ubicacion, producto y lote.
+
+| Columna | Descripcion |
+|---------|-------------|
+| **Almacen** | Almacen padre de la ubicacion |
+| **Ubicacion** | Ubicacion interna especifica |
+| **Producto** | Nombre del producto |
+| **Categoria** | Categoria del producto (columna opcional) |
+| **Lote/Serie** | Numero de lote o serie |
+| **Cantidad** | Stock a la fecha seleccionada |
+| **UdM** | Unidad de medida |
+| **Fecha de Corte** | Fecha seleccionada para el calculo (columna opcional) |
+
+#### Como funciona
+
+1. Un wizard solicita la fecha de corte.
+2. El sistema reconstruye el inventario partiendo del stock actual y deshaciendo los movimientos posteriores a la fecha seleccionada.
+3. Los resultados se muestran en una vista de lista con filtros y agrupaciones:
+   - **Filtro:** Con Existencia (cantidad > 0)
+   - **Agrupar por:** Almacen, Ubicacion, Categoria, Producto, Lote
 
 ---
 
-## Cómo usar
+## Como usar
 
-1. Ve a **Inventario > Reportes > Inventario Avanzado > Rotación de Inventarios**.
-2. Selecciona el **rango de fechas** que deseas analizar.
-3. (Opcional) Marca **Incluir Entrante Futuro** e indica una fecha tope.
+### Rotacion de Inventarios
+
+1. Ve a **Inventario > Reportes > Inventario Avanzado > Rotacion de Inventarios**.
+2. Selecciona el **rango de fechas**.
+3. (Opcional) Marca **Incluir Entrante Futuro** con una fecha tope.
 4. (Opcional) Filtra por **ubicaciones** o carga un preset guardado.
 5. Haz clic en **Generar Reporte**.
-6. Analiza los resultados en la vista de lista. Los colores del flag te indican rápidamente qué productos necesitan atención.
-7. Haz clic en el nombre de un producto para abrir su ficha directamente.
-8. Ordena por cualquier columna numérica haciendo clic en el encabezado.
+
+### Planeacion de Compras
+
+1. Ve a **Inventario > Reportes > Inventario Avanzado > Planeacion de Compras**.
+2. Selecciona un **producto**.
+3. Edita las celdas de **Pronostico de Ventas** y **Pronostico de Compras** segun tus proyecciones.
+4. Observa como cambian los dias de inventario y los flags de rotacion.
+5. Usa las flechas para navegar entre meses.
+
+### Inventario a la Fecha
+
+1. Ve a **Inventario > Reportes > Inventario Avanzado > Inventario a la Fecha**.
+2. Selecciona la **fecha de corte** deseada.
+3. Haz clic en **Calcular**.
+4. Usa los filtros y agrupaciones para analizar los resultados.
 
 ---
 
-## Configuración
+## Configuracion
 
 1. Navega a **Ajustes > Feral Tech > Inventario Avanzado**.
 2. Ingresa el **token de licencia** proporcionado por Feral Tech.
 3. (Opcional) Activa **Mostrar Decimales** para ver 2 decimales en los reportes.
 4. Configura los **rangos del flag** (Amarillo Min, Verde Min, Verde Max, Amarillo Max).
-5. (Opcional) Configura **flags por producto** desde el botón en ajustes, desde **Inventario > Configuración > Inventario Avanzado > Flags de Rotación**, o directamente en la ficha de cada producto.
+5. (Opcional) Selecciona las **ubicaciones a excluir** del calculo de planeacion.
+6. (Opcional) Configura los **tipos de picking** para el calculo de transito.
+7. (Opcional) Configura **flags por producto** para productos con rotacion especial.
+
+### Presets de ubicacion
+
+Puedes guardar combinaciones de ubicaciones frecuentes con un nombre personalizado y cargarlas rapidamente en futuros reportes de rotacion.
 
 ---
 
 ## Requisitos
 
 - Odoo 16 (Community o Enterprise).
-- Módulos de Odoo: **Inventario**, **Compras**, **Contabilidad**.
-- Módulo base: **feral_tech_base**.
-- Licencia activa de Feral Tech.
+- Modulos de Odoo: **Inventario**, **Compras**, **Contabilidad**.
+- Modulo base: **Feral Tech Base** (`feral_tech_base`).
+- Licencia activa con Feral Tech.
+
+Para adquirir una licencia o solicitar soporte, contactanos en **contacto@feraltech.co**
 
 ---
 
 ## Soporte
 
 - Web: [https://feraltech.co](https://feraltech.co)
-- Email: soporte@feraltech.co
+- Email: contacto@feraltech.co
