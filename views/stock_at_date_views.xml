@@ -22,44 +22,26 @@
         </field>
     </record>
 
-    <!-- ===== Results: full-page form wrapping the tree ===== -->
-    <record id="view_stock_at_date_results_form" model="ir.ui.view">
-        <field name="name">ft.advstock.stock.at.date.wizard.results.form</field>
-        <field name="model">ft.advstock.stock.at.date.wizard</field>
+    <!-- ===== Results: Tree view ===== -->
+    <record id="view_stock_at_date_line_tree" model="ir.ui.view">
+        <field name="name">ft.advstock.stock.at.date.line.tree</field>
+        <field name="model">ft.advstock.stock.at.date.line</field>
         <field name="arch" type="xml">
-            <form string="Inventario a la Fecha" create="0" edit="0" delete="0">
-                <header>
-                    <button name="action_new_query" type="object"
-                            string="Nueva Consulta" class="btn-secondary"
-                            icon="fa-refresh"/>
-                </header>
-                <sheet>
-                    <div class="oe_title">
-                        <h2>
-                            Inventario al
-                            <field name="date" readonly="1" class="oe_inline"/>
-                        </h2>
-                    </div>
-                    <field name="line_ids" nolabel="1" readonly="1">
-                        <tree string="Inventario a la Fecha"
-                              create="0" edit="0" delete="0"
-                              default_order="warehouse_name, location_name, product_name">
-                            <field name="warehouse_name"/>
-                            <field name="location_name" string="Ubicación"/>
-                            <field name="product_name" string="Producto"/>
-                            <field name="product_categ_id" string="Categoría"
-                                   optional="hide"/>
-                            <field name="lot_name" string="Lote/Serie"/>
-                            <field name="quantity" sum="Total"/>
-                            <field name="uom_id" string="UdM"/>
-                        </tree>
-                    </field>
-                </sheet>
-            </form>
+            <tree string="Inventario a la Fecha" create="0" edit="0" delete="0">
+                <field name="warehouse_name"/>
+                <field name="location_name" string="Ubicación"/>
+                <field name="product_name" string="Producto"/>
+                <field name="product_categ_id" string="Categoría"
+                       optional="hide"/>
+                <field name="lot_name" string="Lote/Serie"/>
+                <field name="quantity" sum="Total"/>
+                <field name="uom_id" string="UdM"/>
+                <field name="cutoff_date" string="Fecha de Corte" optional="hide"/>
+            </tree>
         </field>
     </record>
 
-    <!-- ===== Results: Search view (for line_ids filtering) ===== -->
+    <!-- ===== Results: Search view ===== -->
     <record id="view_stock_at_date_line_search" model="ir.ui.view">
         <field name="name">ft.advstock.stock.at.date.line.search</field>
         <field name="model">ft.advstock.stock.at.date.line</field>
@@ -78,7 +60,7 @@
                     <filter name="group_warehouse" string="Almacén"
                             context="{'group_by': 'warehouse_name'}"/>
                     <filter name="group_location" string="Ubicación"
-                            context="{'group_by': 'location_id'}"/>
+                            context="{'group_by': 'location_name'}"/>
                     <filter name="group_category" string="Categoría"
                             context="{'group_by': 'product_categ_id'}"/>
                     <filter name="group_product" string="Producto"

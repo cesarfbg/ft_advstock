@@ -94,29 +94,18 @@ class StockAtDateWizard(models.TransientModel):
                 'uom_id': product.uom_id.id,
             })
 
+        created_ids = []
         if line_vals:
-            Line.create(line_vals)
+            created_ids = Line.create(line_vals).ids
 
-        # Open results in full-page form view of the wizard
+        # Open results in standalone tree view
         return {
             'type': 'ir.actions.act_window',
             'name': _('Inventario al %s') % fields.Datetime.to_string(cutoff_date),
-            'res_model': self._name,
-            'res_id': self.id,
-            'view_mode': 'form',
-            'view_id': self.env.ref(
-                'ft_advstock.view_stock_at_date_results_form'
-            ).id,
+            'res_model': 'ft.advstock.stock.at.date.line',
+            'view_mode': 'tree',
+            'domain': [('id', 'in', created_ids)],
             'target': 'current',
-        }
-
-    def action_new_query(self):
-        """Open the wizard dialog again to select a new date."""
-        return {
-            'type': 'ir.actions.act_window',
-            'res_model': self._name,
-            'view_mode': 'form',
-            'target': 'new',
         }
 
     # ------------------------------------------------------------------
