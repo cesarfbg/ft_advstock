@@ -1,9 +1,12 @@
 import base64
 import io
+import logging
 
 from dateutil.relativedelta import relativedelta
 
 from odoo import _, api, fields, models
+
+_logger = logging.getLogger(__name__)
 
 MONTHS_WINDOW = 5  # 5 before + current + 5 after = 11
 NUM_COLS = 2 * MONTHS_WINDOW + 1  # 11
@@ -353,17 +356,34 @@ class PurchasePlanning(models.TransientModel):
         ))
         # Expand to include child locations (Odoo locations are hierarchical)
         if excluded_loc_ids_raw:
-            excluded_loc_ids = self.env['stock.location'].search([
+            excluded_locs = self.env['stock.location'].search([
                 ('id', 'child_of', excluded_loc_ids_raw),
-            ]).ids
+            ])
         else:
-            excluded_loc_ids = []
+            excluded_locs = self.env['stock.location']
+
+        # Pre-compute valid internal location IDs (all internal minus excluded)
+        all_internal_locs = self.env['stock.location'].search([
+            ('usage', '=', 'internal'),
+        ])
+        valid_loc_ids = tuple(
+            loc.id for loc in all_internal_locs if loc.id not in excluded_locs.ids
+        ) or (0,)  # (0,) prevents empty IN clause in SQL
+
+        _logger.info(
+            '[ft_advstock] Planeación %s — Producto: %s | '
+            'Ubicaciones internas: %d | Excluidas: %s | Válidas: %d',
+            self.id, product.display_name,
+            len(all_internal_locs), excluded_locs.mapped('complete_name'),
+            len(valid_loc_ids),
+        )
+
         picking_type_ids = list(set(
             pt_id for c in companies for pt_id in c.ft_advstock_planning_picking_type_ids.ids
         ))
 
         # Gather data in batch
-        initial_inv_map = self._get_initial_inventory_map(product.id, company_ids, months, excluded_loc_ids)
+        initial_inv_map = self._get_initial_inventory_map(product.id, company_ids, months, valid_loc_ids)
         transit_map = self._get_transit_map(product.id, company_ids, months)
         sales_map = self._get_real_sales_map(product.id, company_ids, months, picking_type_ids)
         sales_forecast_map = self._get_sales_forecast_map(product.id, company_ids, months)
@@ -445,50 +465,42 @@ class PurchasePlanning(models.TransientModel):
     # Data fetching helpers (SQL for performance)
     # ------------------------------------------------------------------
 
-    def _get_initial_inventory_map(self, product_id, company_ids, months, excluded_loc_ids):
+    def _get_initial_inventory_map(self, product_id, company_ids, months, valid_loc_ids):
         """Net stock at the 1st day of each month (sum of done moves before that date).
 
-        Uses UNION ALL to separately track entries and exits from non-excluded
-        internal locations, avoiding double-counting from OR JOINs.
+        Uses UNION ALL to separately track entries and exits.
+        valid_loc_ids is a pre-computed tuple of internal location IDs
+        that are NOT in the exclusion list.
         """
         result = {}
         if not months:
             return result
 
-        if excluded_loc_ids:
-            loc_sub = ("SELECT id FROM stock_location"
-                       " WHERE usage = 'internal' AND id NOT IN %s")
-            loc_params = [tuple(excluded_loc_ids)]
-        else:
-            loc_sub = "SELECT id FROM stock_location WHERE usage = 'internal'"
-            loc_params = []
-
-        sql = (
-            "SELECT COALESCE(SUM(net_qty), 0) FROM ("
-            "  SELECT sm.product_uom_qty AS net_qty"
-            "  FROM stock_move sm"
-            "  WHERE sm.product_id = %s"
-            "    AND sm.company_id IN %s"
-            "    AND sm.state = 'done'"
-            "    AND sm.date < %s"
-            "    AND sm.location_dest_id IN (" + loc_sub + ")"
-            "  UNION ALL"
-            "  SELECT -sm.product_uom_qty AS net_qty"
-            "  FROM stock_move sm"
-            "  WHERE sm.product_id = %s"
-            "    AND sm.company_id IN %s"
-            "    AND sm.state = 'done'"
-            "    AND sm.date < %s"
-            "    AND sm.location_id IN (" + loc_sub + ")"
-            ") sub"
-        )
+        sql = """
+            SELECT COALESCE(SUM(net_qty), 0) FROM (
+                SELECT sm.product_uom_qty AS net_qty
+                FROM stock_move sm
+                WHERE sm.product_id = %s
+                  AND sm.company_id IN %s
+                  AND sm.state = 'done'
+                  AND sm.date < %s
+                  AND sm.location_dest_id IN %s
+                UNION ALL
+                SELECT -sm.product_uom_qty AS net_qty
+                FROM stock_move sm
+                WHERE sm.product_id = %s
+                  AND sm.company_id IN %s
+                  AND sm.state = 'done'
+                  AND sm.date < %s
+                  AND sm.location_id IN %s
+            ) sub
+        """
 
         for month_start in months:
-            params = (
-                [product_id, company_ids, month_start] + loc_params
-                + [product_id, company_ids, month_start] + loc_params
-            )
-            self.env.cr.execute(sql, params)
+            self.env.cr.execute(sql, [
+                product_id, company_ids, month_start, valid_loc_ids,
+                product_id, company_ids, month_start, valid_loc_ids,
+            ])
             row = self.env.cr.fetchone()
             result[month_start] = row[0] if row else 0.0
 
