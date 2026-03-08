@@ -15,7 +15,6 @@ ROW_TYPES = [
     ('total', 'Inv. Total'),
     ('sales_forecast', 'Pronóstico de Ventas'),
     ('real_sales', 'Venta Real'),
-    ('deviation', 'Desviación %'),
     ('final_inventory', 'Inv. Final'),
     ('rotation', 'Días de Inventario'),
 ]
@@ -369,8 +368,6 @@ class PurchasePlanning(models.TransientModel):
         sales_map = self._get_real_sales_map(product.id, company_ids, months, picking_type_ids)
         sales_forecast_map = self._get_sales_forecast_map(product.id, company_ids, months)
         purchase_forecast_map = self._get_purchase_forecast_map(product.id, company_ids, months)
-        final_inv_map = self._get_final_inventory_map(product.id, company_ids, months, excluded_loc_ids, current_month_start)
-
         # Flag thresholds (per-product override or global from main company)
         flag_rec = self.env['ft.advstock.product.flag'].search([
             ('product_id', '=', product.id),
@@ -392,7 +389,6 @@ class PurchasePlanning(models.TransientModel):
         prev_final = None
 
         for i, month_start in enumerate(months):
-            is_past = month_start < current_month_start
             is_future = month_start > current_month_start
             col = f'col_{i}'
 
@@ -408,16 +404,7 @@ class PurchasePlanning(models.TransientModel):
             sales_forecast = sales_forecast_map.get(month_start, 0.0)
             real_sales = sales_map.get(month_start, 0.0) if not is_future else 0.0
 
-            if sales_forecast and real_sales:
-                deviation = ((real_sales - sales_forecast) / sales_forecast) * 100
-            else:
-                deviation = None  # show as "-"
-
-            if is_past:
-                final_inv = final_inv_map.get(month_start, 0.0)
-            else:
-                final_inv = total_inv - sales_forecast
-
+            final_inv = total_inv - sales_forecast
             prev_final = final_inv
 
             next_month = month_start + relativedelta(months=1)
@@ -435,11 +422,6 @@ class PurchasePlanning(models.TransientModel):
             row_data['sales_forecast'][col] = _fmt(sales_forecast)
             row_data['real_sales'][col] = _fmt(real_sales)
             row_data['final_inventory'][col] = _fmt(final_inv)
-
-            if deviation is None:
-                row_data['deviation'][col] = '-'
-            else:
-                row_data['deviation'][col] = f'{deviation:.1f}%'
 
             rotation_capped = min(rotation, INFINITY)
             row_data['rotation'][col] = f'{rotation_capped:.0f} {flag_symbol}'
@@ -464,76 +446,49 @@ class PurchasePlanning(models.TransientModel):
     # ------------------------------------------------------------------
 
     def _get_initial_inventory_map(self, product_id, company_ids, months, excluded_loc_ids):
-        """Net stock at the 1st day of each month (sum of done moves before that date)."""
+        """Net stock at the 1st day of each month (sum of done moves before that date).
+
+        Uses UNION ALL to separately track entries and exits from non-excluded
+        internal locations, avoiding double-counting from OR JOINs.
+        """
         result = {}
         if not months:
             return result
 
-        excluded_clause = ""
-        excluded_params = []
         if excluded_loc_ids:
-            excluded_clause = "AND sl.id NOT IN %s"
-            excluded_params = [tuple(excluded_loc_ids)]
+            loc_sub = ("SELECT id FROM stock_location"
+                       " WHERE usage = 'internal' AND id NOT IN %s")
+            loc_params = [tuple(excluded_loc_ids)]
+        else:
+            loc_sub = "SELECT id FROM stock_location WHERE usage = 'internal'"
+            loc_params = []
+
+        sql = (
+            "SELECT COALESCE(SUM(net_qty), 0) FROM ("
+            "  SELECT sm.product_uom_qty AS net_qty"
+            "  FROM stock_move sm"
+            "  WHERE sm.product_id = %s"
+            "    AND sm.company_id IN %s"
+            "    AND sm.state = 'done'"
+            "    AND sm.date < %s"
+            "    AND sm.location_dest_id IN (" + loc_sub + ")"
+            "  UNION ALL"
+            "  SELECT -sm.product_uom_qty AS net_qty"
+            "  FROM stock_move sm"
+            "  WHERE sm.product_id = %s"
+            "    AND sm.company_id IN %s"
+            "    AND sm.state = 'done'"
+            "    AND sm.date < %s"
+            "    AND sm.location_id IN (" + loc_sub + ")"
+            ") sub"
+        )
 
         for month_start in months:
-            self.env.cr.execute("""
-                SELECT COALESCE(SUM(
-                    CASE
-                        WHEN sm.location_dest_id = sl.id THEN sm.product_uom_qty
-                        WHEN sm.location_id = sl.id THEN -sm.product_uom_qty
-                        ELSE 0
-                    END
-                ), 0) AS net_qty
-                FROM stock_move sm
-                JOIN stock_location sl ON (
-                    sl.id = sm.location_dest_id OR sl.id = sm.location_id
-                )
-                WHERE sm.product_id = %%s
-                  AND sm.company_id IN %%s
-                  AND sm.state = 'done'
-                  AND sm.date < %%s
-                  AND sl.usage = 'internal'
-                  %s
-            """ % excluded_clause, [product_id, company_ids, month_start] + excluded_params)
-            row = self.env.cr.fetchone()
-            result[month_start] = row[0] if row else 0.0
-
-        return result
-
-    def _get_final_inventory_map(self, product_id, company_ids, months, excluded_loc_ids, current_month_start):
-        """Net stock at end of each past month."""
-        result = {}
-        past_months = [m for m in months if m < current_month_start]
-        if not past_months:
-            return result
-
-        excluded_clause = ""
-        excluded_params = []
-        if excluded_loc_ids:
-            excluded_clause = "AND sl.id NOT IN %s"
-            excluded_params = [tuple(excluded_loc_ids)]
-
-        for month_start in past_months:
-            month_end = month_start + relativedelta(months=1)
-            self.env.cr.execute("""
-                SELECT COALESCE(SUM(
-                    CASE
-                        WHEN sm.location_dest_id = sl.id THEN sm.product_uom_qty
-                        WHEN sm.location_id = sl.id THEN -sm.product_uom_qty
-                        ELSE 0
-                    END
-                ), 0) AS net_qty
-                FROM stock_move sm
-                JOIN stock_location sl ON (
-                    sl.id = sm.location_dest_id OR sl.id = sm.location_id
-                )
-                WHERE sm.product_id = %%s
-                  AND sm.company_id IN %%s
-                  AND sm.state = 'done'
-                  AND sm.date < %%s
-                  AND sl.usage = 'internal'
-                  %s
-            """ % excluded_clause, [product_id, company_ids, month_end] + excluded_params)
+            params = (
+                [product_id, company_ids, month_start] + loc_params
+                + [product_id, company_ids, month_start] + loc_params
+            )
+            self.env.cr.execute(sql, params)
             row = self.env.cr.fetchone()
             result[month_start] = row[0] if row else 0.0
 
