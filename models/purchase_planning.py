@@ -125,7 +125,7 @@ class PurchasePlanning(models.TransientModel):
                 )
         records = super().create(vals_list)
         for rec in records:
-            rec._compute_planning_lines()
+            rec._do_refresh()
         return records
 
     def write(self, vals):
@@ -349,9 +349,16 @@ class PurchasePlanning(models.TransientModel):
         company_ids = tuple(allowed_company_ids)
         companies = self.env['res.company'].browse(allowed_company_ids)
 
-        excluded_loc_ids = list(set(
+        excluded_loc_ids_raw = list(set(
             loc_id for c in companies for loc_id in c.ft_advstock_excluded_location_ids.ids
         ))
+        # Expand to include child locations (Odoo locations are hierarchical)
+        if excluded_loc_ids_raw:
+            excluded_loc_ids = self.env['stock.location'].search([
+                ('id', 'child_of', excluded_loc_ids_raw),
+            ]).ids
+        else:
+            excluded_loc_ids = []
         picking_type_ids = list(set(
             pt_id for c in companies for pt_id in c.ft_advstock_planning_picking_type_ids.ids
         ))
